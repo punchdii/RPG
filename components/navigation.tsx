@@ -33,7 +33,7 @@ export function Navigation() {
 
           {/* Navigation Links - Centered with equal spacing */}
           <div className="hidden md:flex flex-1 items-center justify-center gap-24">
-            <Link href="/" className="text-slate-300 hover:text-white hover:underline underline-offset-4 transition-colors capitalize">
+            <Link href="/global-tree" className="text-slate-300 hover:text-white hover:underline underline-offset-4 transition-colors capitalize">
               Global Tree
             </Link>
             <button

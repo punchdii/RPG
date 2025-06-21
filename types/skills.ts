@@ -28,4 +28,10 @@ export interface UserSkills {
     }>
     connections: Array<{ from: string; to: string }>
   }
+  globalMetadata?: {
+    totalUsers: number
+    lastUpdated: Date
+    totalNodes: number
+    totalConnections: number
+  }
 }
