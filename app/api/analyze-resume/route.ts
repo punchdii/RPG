@@ -65,10 +65,13 @@ Rules:
 1. Include 3 main category nodes: "software", "hardware", "soft-skills"
 2. Mark skills as "earned: true" if they appear in the resume
 3. Mark skills as "earned: false" for beneficial skills not yet acquired
-4. Include realistic prerequisites and connections
-5. Aim for 15-25 total skill nodes
-6. Use kebab-case for IDs (e.g., "machine-learning", "project-management")
-7. Only return valid JSON, no additional text`
+4. Be specific on beneficial skill, they should be a level of abstraction lower than the existing it is connected to
+5. Include realistic prerequisites and connections
+6. Aim for 15-25 total skill nodes
+7. Use kebab-case for IDs (e.g., "machine-learning", "project-management")
+8. Only return valid JSON, no additional text
+9. Aim to have number of beneficial skills not yet acquired to be 2 times than existing skills`
+
 
     const result = await model.generateContent(prompt)
     const response = await result.response
