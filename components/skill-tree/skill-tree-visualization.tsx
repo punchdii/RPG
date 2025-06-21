@@ -307,11 +307,33 @@ const createEdges = (userSkills: UserSkills): Edge[] => {
         opacity: 0.7,
     };
 
-    // Use saved connections if available, otherwise build from prerequisites
+    // Use saved connections if available, but also add missing prerequisite connections
     let connections: Array<{ from: string; to: string }> = [];
     
     if (userSkills.skillTree?.connections) {
-        connections = userSkills.skillTree.connections;
+        connections = [...userSkills.skillTree.connections];
+        console.log('🔗 Using saved connections:', connections);
+        
+        // Also add connections from prerequisites that might be missing
+        const allSkills = getSkillsData(userSkills);
+        const prerequisiteConnections = allSkills.flatMap((skill: any) => {
+            if (!skill.prerequisites?.length) return [];
+            return skill.prerequisites.map((prereqId: any) => ({
+                from: prereqId,
+                to: skill.id
+            }));
+        });
+        
+        // Add missing connections
+        prerequisiteConnections.forEach(prereqConn => {
+            const exists = connections.some(conn => 
+                conn.from === prereqConn.from && conn.to === prereqConn.to
+            );
+            if (!exists) {
+                connections.push(prereqConn);
+                console.log('➕ Added missing connection:', prereqConn);
+            }
+        });
     } else {
         // Fallback: build from prerequisites
         const allSkills = getSkillsData(userSkills);
@@ -322,6 +344,7 @@ const createEdges = (userSkills: UserSkills): Edge[] => {
                 to: skill.id
             }));
         });
+        console.log('🔗 Built connections from prerequisites:', connections);
     }
 
     // Create edges from connections
@@ -366,6 +389,10 @@ const SkillTreeVisualization = ({ userSkills, onSkillClick }: SkillTreeVisualiza
     });
 
     const edges = createEdges(userSkills);
+    
+    // Debug logs (can be removed in production)
+    // console.log('🎯 Nodes created:', nodes.map(n => ({ id: n.id, type: n.type })));
+    // console.log('🔗 Edges created:', edges.map(e => ({ from: e.source, to: e.target })));
 
     const onNodeClick: NodeMouseHandler = (_event, node) => {
         const typedNode = node as TreeNode;
