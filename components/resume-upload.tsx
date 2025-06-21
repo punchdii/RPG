@@ -10,14 +10,16 @@ import { analyzeResume } from "@/lib/resume-analyzer"
 
 interface ResumeUploadProps {
   onResumeAnalyzed: (skills: UserSkills) => void
+  defaultMode?: 'upload' | 'text'
 }
 
-export function ResumeUpload({ onResumeAnalyzed }: ResumeUploadProps) {
+export function ResumeUpload({ onResumeAnalyzed, defaultMode = 'upload' }: ResumeUploadProps) {
   const [resumeText, setResumeText] = useState("")
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
   const [isDragOver, setIsDragOver] = useState(false)
   const [isProcessingPdf, setIsProcessingPdf] = useState(false)
+  const [currentMode, setCurrentMode] = useState<'upload' | 'text'>(defaultMode)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleAnalyze = async () => {
@@ -137,107 +139,147 @@ Bachelor of Science in Computer Science - State University (2019)`
 
   return (
     <div className="max-w-4xl mx-auto">
-      <Card className="bg-slate-800/50 border-slate-700">
-        <CardHeader className="text-center">
+      <Card className="bg-slate-800/30 border-slate-700/50 backdrop-blur-sm">
+        <CardHeader className="text-center pb-6">
           <CardTitle className="text-2xl text-white flex items-center justify-center gap-2">
             <FileText className="w-6 h-6" />
-            Upload Your Resume
+            {currentMode === 'upload' ? 'Upload Your Resume' : 'Enter Resume Text'}
           </CardTitle>
-          <p className="text-slate-300">
-            Upload a PDF or paste your resume text below and we'll analyze your skills to generate your personalized skill tree
+          <p className="text-slate-400">
+            {currentMode === 'upload' 
+              ? 'Upload a PDF file or switch to text input below'
+              : 'Paste your resume text below to analyze your skills'
+            }
           </p>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* PDF Upload Section */}
-          <div className="space-y-2">
-            <div
-              className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
-                isDragOver
-                  ? "border-purple-400 bg-purple-900/20"
-                  : "border-slate-600 hover:border-slate-500"
-              }`}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-            >
-              {uploadedFile ? (
-                <div className="flex items-center justify-center gap-3">
-                  <File className="w-8 h-8 text-green-400" />
-                  <div className="text-left">
-                    <p className="text-white font-medium">{uploadedFile.name}</p>
-                    <p className="text-slate-400 text-sm">
-                      {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
-                    </p>
-                    {isProcessingPdf && (
-                      <p className="text-purple-400 text-sm flex items-center gap-1">
-                        <Sparkles className="w-3 h-3 animate-spin" />
-                        Processing...
-                      </p>
-                    )}
-                  </div>
-                  <Button
-                    onClick={removeFile}
-                    variant="ghost"
-                    size="sm"
-                    className="text-slate-400 hover:text-white"
-                    disabled={isProcessingPdf}
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
-                </div>
-              ) : (
-                <div>
-                  <Upload className="w-12 h-12 mx-auto mb-4 text-slate-400" />
-                  <p className="text-white mb-2">
-                    Drag and drop your PDF here, or{" "}
-                    <button
-                      onClick={handleUploadClick}
-                      className="text-purple-400 hover:text-purple-300 underline"
-                    >
-                      browse
-                    </button>
-                  </p>
-                  <p className="text-slate-400 text-sm">Supports PDF files only</p>
-                </div>
-              )}
+          
+          {/* Mode switcher */}
+          <div className="flex justify-center mt-4">
+            <div className="bg-slate-700/50 rounded-lg p-1 flex">
+              <button
+                onClick={() => setCurrentMode('upload')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  currentMode === 'upload'
+                    ? 'bg-orange-600 text-white'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                PDF Upload
+              </button>
+              <button
+                onClick={() => setCurrentMode('text')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  currentMode === 'text'
+                    ? 'bg-orange-600 text-white'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Text Input
+              </button>
             </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".pdf"
-              onChange={handleFileInputChange}
-              className="hidden"
-            />
           </div>
+        </CardHeader>
+        
+        <CardContent className="space-y-6">
+          {currentMode === 'upload' && (
+            /* PDF Upload Section */
+            <div className="space-y-4">
+              <div
+                className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
+                  isDragOver
+                    ? "border-orange-400 bg-orange-900/20"
+                    : "border-slate-600 hover:border-slate-500"
+                }`}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+              >
+                {uploadedFile ? (
+                  <div className="flex items-center justify-center gap-4">
+                    <File className="w-10 h-10 text-green-400" />
+                    <div className="text-left">
+                      <p className="text-white font-medium text-lg">{uploadedFile.name}</p>
+                      <p className="text-slate-400">
+                        {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
+                      </p>
+                      {isProcessingPdf && (
+                        <p className="text-orange-400 text-sm flex items-center gap-2 mt-1">
+                          <Sparkles className="w-4 h-4 animate-spin" />
+                          Extracting text from PDF...
+                        </p>
+                      )}
+                    </div>
+                    <Button
+                      onClick={removeFile}
+                      variant="ghost"
+                      size="sm"
+                      className="text-slate-400 hover:text-white ml-4"
+                      disabled={isProcessingPdf}
+                    >
+                      <X className="w-5 h-5" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <Upload className="w-16 h-16 mx-auto text-slate-400" />
+                    <div>
+                      <p className="text-white text-lg mb-2">
+                        Drag and drop your PDF here, or{" "}
+                        <button
+                          onClick={handleUploadClick}
+                          className="text-orange-400 hover:text-orange-300 underline font-medium"
+                        >
+                          browse files
+                        </button>
+                      </p>
+                      <p className="text-slate-400">Supports PDF files up to 10MB</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf"
+                onChange={handleFileInputChange}
+                className="hidden"
+              />
+            </div>
+          )}
 
           {/* Text Input Section */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-white">Or paste your resume text:</label>
-            <Textarea
-              placeholder="Paste your resume text here..."
-              value={resumeText}
-              onChange={(e) => setResumeText(e.target.value)}
-              className="min-h-[300px] bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-400"
-            />
-          </div>
+          {(currentMode === 'text' || resumeText) && (
+            <div className="space-y-4">
+              <label className="text-sm font-medium text-white block">
+                {currentMode === 'upload' ? 'Extracted text:' : 'Resume text:'}
+              </label>
+              <Textarea
+                placeholder="Paste your resume text here..."
+                value={resumeText}
+                onChange={(e) => setResumeText(e.target.value)}
+                className="min-h-[400px] bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-400 text-sm"
+                readOnly={isProcessingPdf}
+              />
+            </div>
+          )}
 
-          <div className="flex gap-3 justify-center">
+          {/* Action buttons */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
             <Button
               onClick={handleDemoResume}
               variant="outline"
-              className="bg-slate-700 border-slate-600 text-white hover:bg-slate-600"
+              className="bg-slate-700/50 border-slate-600 text-white hover:bg-slate-600 px-6 py-3"
             >
               Use Demo Resume
             </Button>
             <Button
               onClick={handleAnalyze}
-              disabled={!resumeText.trim() || isAnalyzing}
-              className="bg-purple-600 hover:bg-purple-700 text-white"
+              disabled={!resumeText.trim() || isAnalyzing || isProcessingPdf}
+              className="bg-orange-600 hover:bg-orange-700 text-white px-8 py-3 font-medium"
             >
               {isAnalyzing ? (
                 <>
                   <Sparkles className="w-4 h-4 mr-2 animate-spin" />
-                  Analyzing...
+                  Analyzing Resume...
                 </>
               ) : (
                 <>
