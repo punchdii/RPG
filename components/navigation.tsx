@@ -1,9 +1,19 @@
 "use client"
 
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
+import { useAuth } from "@/contexts/auth-context"
 
 export function Navigation() {
+  const { user, logout } = useAuth()
+  const router = useRouter()
+
+  const handleLogout = () => {
+    logout()
+    router.push('/')
+  }
+
   return (
     <nav className="border-b border-[0.5px] border-white/30 bg-black/20 backdrop-blur-sm">
       <div className="container mx-auto px-4 py-4">
@@ -36,12 +46,28 @@ export function Navigation() {
 
           {/* Auth Buttons */}
           <div className="flex items-center gap-3">
-            <Button variant="ghost" className="text-slate-300 hover:text-white hover:bg-slate-800">
-              Sign In
-            </Button>
-            <Button className="bg-orange-600 hover:bg-orange-700 text-white">
-              Sign Up
-            </Button>
+            {user ? (
+              <Button 
+                onClick={handleLogout}
+                variant="ghost" 
+                className="text-slate-300 hover:text-white hover:bg-slate-800"
+              >
+                Log Out
+              </Button>
+            ) : (
+              <>
+                <Link href="/signin">
+                  <Button variant="ghost" className="text-slate-300 hover:text-white hover:bg-slate-800">
+                    Sign In
+                  </Button>
+                </Link>
+                <Link href="/signup">
+                  <Button className="bg-orange-600 hover:bg-orange-700 text-white">
+                    Sign Up
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </div>

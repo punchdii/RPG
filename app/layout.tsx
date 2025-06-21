@@ -3,6 +3,7 @@ import './globals.css'
 import { Navigation } from '@/components/navigation'
 import { Footer } from '@/components/footer'
 import { Lexend_Deca } from 'next/font/google'
+import { AuthProvider } from '@/contexts/auth-context'
 
 const lexendDeca = Lexend_Deca({
   subsets: ['latin'],
@@ -22,9 +23,11 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className={`min-h-screen bg-slate-900 bg-[url('/Background.png')] bg-cover bg-center bg-no-repeat ${lexendDeca.className}`}>
-        <Navigation />
-        {children}
-        <Footer />
+        <AuthProvider>
+          <Navigation />
+          {children}
+          <Footer />
+        </AuthProvider>
       </body>
     </html>
   )
