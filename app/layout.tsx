@@ -1,6 +1,13 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { Navigation } from '@/components/navigation'
+import { Footer } from '@/components/footer'
+import { Lexend_Deca } from 'next/font/google'
+
+const lexendDeca = Lexend_Deca({
+  subsets: ['latin'],
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
   title: 'ResumeTree - Transform Your Resume Into an Interactive Skill Tree',
@@ -14,9 +21,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      <body className={`min-h-screen bg-slate-900 bg-[url('/Background.png')] bg-cover bg-center bg-no-repeat ${lexendDeca.className}`}>
         <Navigation />
         {children}
+        <Footer />
       </body>
     </html>
   )
