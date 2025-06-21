@@ -235,12 +235,31 @@ const generateDynamicPositions = (skills: any[]) => {
 const createNodes = (userSkills: UserSkills) => {
     const allSkills = getSkillsData(userSkills);
     
+    // Deduplicate skills to prevent React key conflicts
+    const skillIds = new Set<string>();
+    const uniqueSkills: any[] = [];
+    let duplicateSkillCount = 0;
+    
+    for (const skill of allSkills) {
+        if (!skillIds.has(skill.id)) {
+            skillIds.add(skill.id);
+            uniqueSkills.push(skill);
+        } else {
+            console.log(`🔄 Removing duplicate skill in createNodes: ${skill.id}`);
+            duplicateSkillCount++;
+        }
+    }
+    
+    if (duplicateSkillCount > 0) {
+        console.log(`✅ Node deduplication: removed ${duplicateSkillCount} duplicates, ${uniqueSkills.length} unique skills remain`);
+    }
+    
     // Use dynamic positions for saved skill trees, static for hardcoded data
     const positions = userSkills.skillTree?.nodes ? 
-        generateDynamicPositions(allSkills) : 
+        generateDynamicPositions(uniqueSkills) : 
         positionMap;
     
-    const skillNodes = allSkills
+    const skillNodes = uniqueSkills
         .filter((skill: any) => skill.category !== 'Category')
         .map((skill: any): SkillNode | null => {
             const position = positions[skill.id];
@@ -347,8 +366,28 @@ const createEdges = (userSkills: UserSkills): Edge[] => {
         console.log('🔗 Built connections from prerequisites:', connections);
     }
 
-    // Create edges from connections
-    const skillEdges = connections.map(connection => ({
+    // Deduplicate connections to prevent duplicate edge IDs
+    const connectionKeys = new Set<string>();
+    const uniqueConnections: Array<{ from: string; to: string }> = [];
+    let duplicateConnectionCount = 0;
+    
+    for (const connection of connections) {
+        const connectionKey = `${connection.from}->${connection.to}`;
+        if (!connectionKeys.has(connectionKey)) {
+            connectionKeys.add(connectionKey);
+            uniqueConnections.push(connection);
+        } else {
+            console.log(`🔄 Removing duplicate connection in createEdges: ${connectionKey}`);
+            duplicateConnectionCount++;
+        }
+    }
+    
+    if (duplicateConnectionCount > 0) {
+        console.log(`✅ Edge deduplication: removed ${duplicateConnectionCount} duplicates, ${uniqueConnections.length} unique connections remain`);
+    }
+
+    // Create edges from unique connections
+    const skillEdges = uniqueConnections.map(connection => ({
         id: `e-${connection.from}-${connection.to}`,
         source: connection.from,
         target: connection.to,

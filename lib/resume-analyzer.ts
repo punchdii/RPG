@@ -62,8 +62,7 @@ Please respond with a JSON object in this exact format:
 
 Rules:
 1. Include 3 main category nodes: "software", "hardware", "soft-skills"
-2. Mark skills as "earned: true" if they appear in the resume
-3. Mark skills as "earned: false" for beneficial skills not yet acquired
+2. Mark skills as "earned: true" if they appear in the re"earned: false" for beneficial skills not yet acquired
 4. Include realistic prerequisites and connections
 5. Aim for 15-25 total skill nodes
 6. Use kebab-case for IDs (e.g., "machine-learning", "project-management")
