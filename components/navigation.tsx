@@ -17,7 +17,7 @@ export function Navigation() {
   return (
     <nav className="border-b border-[0.5px] border-white/30 bg-black/20 backdrop-blur-sm">
       <div className="container mx-auto px-4 py-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
             <img 
@@ -31,16 +31,19 @@ export function Navigation() {
             </span>
           </Link>
 
-          {/* Navigation Links */}
-          <div className="hidden md:flex items-center gap-8 ml-12">
-            <Link href="/" className="text-slate-300 hover:text-white hover:underline underline-offset-4 transition-colors">
-              global tree
+          {/* Navigation Links - Centered with equal spacing */}
+          <div className="hidden md:flex flex-1 items-center justify-center gap-24">
+            <Link href="/global-tree" className="text-slate-300 hover:text-white hover:underline underline-offset-4 transition-colors capitalize">
+              Global Tree
             </Link>
-            <Link href="/skill-tree" className="text-slate-300 hover:text-white hover:underline underline-offset-4 transition-colors">
-              local tree
-            </Link>
-            <Link href="/contact" className="text-slate-300 hover:text-white hover:underline underline-offset-4 transition-colors">
-              contact
+            <button
+              onClick={() => user ? router.push('/skill-tree') : router.push('/signin')}
+              className="text-slate-300 hover:text-white hover:underline underline-offset-4 transition-colors capitalize"
+            >
+              Local Tree
+            </button>
+            <Link href="/contact" className="text-slate-300 hover:text-white hover:underline underline-offset-4 transition-colors capitalize">
+              Contact
             </Link>
           </div>
 

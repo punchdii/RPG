@@ -90,6 +90,48 @@ Rules:
       }
       skillTreeData = JSON.parse(jsonMatch[0])
       console.log('✅ Successfully parsed JSON with', skillTreeData.nodes?.length, 'nodes')
+      
+      // Deduplicate nodes to prevent React key conflicts
+      if (skillTreeData.nodes && Array.isArray(skillTreeData.nodes)) {
+        const nodeIds = new Set<string>()
+        const uniqueNodes: SkillNode[] = []
+        let duplicateCount = 0
+        
+        for (const node of skillTreeData.nodes) {
+          if (!nodeIds.has(node.id)) {
+            nodeIds.add(node.id)
+            uniqueNodes.push(node)
+          } else {
+            console.log(`🔄 Removing duplicate node from AI response: ${node.id}`)
+            duplicateCount++
+          }
+        }
+        
+        skillTreeData.nodes = uniqueNodes
+        console.log(`✅ Deduplication complete - removed ${duplicateCount} duplicates, ${uniqueNodes.length} unique nodes remain`)
+      }
+      
+      // Deduplicate connections as well
+      if (skillTreeData.connections && Array.isArray(skillTreeData.connections)) {
+        const connectionKeys = new Set<string>()
+        const uniqueConnections: Array<{ from: string; to: string }> = []
+        let duplicateConnectionCount = 0
+        
+        for (const connection of skillTreeData.connections) {
+          const connectionKey = `${connection.from}->${connection.to}`
+          if (!connectionKeys.has(connectionKey)) {
+            connectionKeys.add(connectionKey)
+            uniqueConnections.push(connection)
+          } else {
+            console.log(`🔄 Removing duplicate connection from AI response: ${connectionKey}`)
+            duplicateConnectionCount++
+          }
+        }
+        
+        skillTreeData.connections = uniqueConnections
+        console.log(`✅ Connection deduplication complete - removed ${duplicateConnectionCount} duplicates, ${uniqueConnections.length} unique connections remain`)
+      }
+      
     } catch (parseError) {
       console.error('❌ Failed to parse Gemini response:', parseError)
       console.error('Raw response:', text)

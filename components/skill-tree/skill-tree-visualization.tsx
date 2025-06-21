@@ -58,28 +58,48 @@ const getSkillStatus = (skillId: string, userSkills: UserSkills) => {
 }
 
 // Grid layout constants for better spacing
-const COL_WIDTH = 280;
-const ROW_HEIGHT = 180;
+const COL_WIDTH = 275;
+const ROW_HEIGHT =250;
 const X_OFFSET = 100;
 const Y_OFFSET = 150;
 
 // Function to add controlled randomness to positions
-const addRandomOffset = (baseX: number, baseY: number, seed: number): { x: number, y: number } => {
-    // Use seed to generate consistent but different offsets for each node
-    const randomX = Math.sin(seed) * 20; // Max 20px horizontal offset
-    const randomY = Math.cos(seed * 2) * 15; // Max 15px vertical offset
+const addRandomOffset = (x: number, y: number, seed: number | string) => {
+    // For string seeds, convert to a numeric seed
+    const numericSeed = typeof seed === 'string' 
+        ? seed.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+        : seed;
+
+    // Generate deterministic but random-looking offsets based on seed
+    const offsetX = Math.sin(numericSeed * 137.5) * 50; // Increased from default spread
+    const offsetY = Math.cos(numericSeed * 294.7) * 40; // Increased from default spread
+
+    // Add extra spread for web development path nodes
+    const webDevNodes = ['typescript', 'reactjs', 'webdev'];
+    const isWebDevNode = typeof seed === 'string' && webDevNodes.includes(seed);
     
+    if (isWebDevNode) {
+        // Add additional spread for web development nodes
+        const stringLength = seed.toString().length;
+        const extraOffsetX = Math.sin(stringLength * 179.3) * 75; // Extra horizontal spread
+        const extraOffsetY = Math.cos(stringLength * 382.5) * 60; // Extra vertical spread
+        return {
+            x: x + offsetX + extraOffsetX,
+            y: y + offsetY + extraOffsetY
+        };
+    }
+
     return {
-        x: baseX + randomX,
-        y: baseY + randomY
+        x: x + offsetX,
+        y: y + offsetY
     };
 };
 
 const positionMap: { [key: string]: { x: number, y: number } } = {
-    // Software Path - Web Development
-    'typescript': addRandomOffset(X_OFFSET + 0 * COL_WIDTH, Y_OFFSET + 0 * ROW_HEIGHT, 1),
-    'reactjs': addRandomOffset(X_OFFSET + 0 * COL_WIDTH, Y_OFFSET + 1 * ROW_HEIGHT, 2),
-    'webdev': addRandomOffset(X_OFFSET + 0 * COL_WIDTH, Y_OFFSET + 2 * ROW_HEIGHT, 3),
+    // Software Path - Web Development (adjusted positions and using node IDs as seeds)
+    'typescript': addRandomOffset(X_OFFSET + 0 * COL_WIDTH, Y_OFFSET + 0 * ROW_HEIGHT, 'typescript'),
+    'reactjs': addRandomOffset(X_OFFSET + 0 * COL_WIDTH, Y_OFFSET + 1 * ROW_HEIGHT, 'reactjs'),
+    'webdev': addRandomOffset(X_OFFSET + 0 * COL_WIDTH, Y_OFFSET + 2 * ROW_HEIGHT, 'webdev'),
     
     // Software Path - Game Development
     '3d-animation': addRandomOffset(X_OFFSET + 1 * COL_WIDTH, Y_OFFSET + 0 * ROW_HEIGHT, 4),
@@ -235,12 +255,31 @@ const generateDynamicPositions = (skills: any[]) => {
 const createNodes = (userSkills: UserSkills) => {
     const allSkills = getSkillsData(userSkills);
     
+    // Deduplicate skills to prevent React key conflicts
+    const skillIds = new Set<string>();
+    const uniqueSkills: any[] = [];
+    let duplicateSkillCount = 0;
+    
+    for (const skill of allSkills) {
+        if (!skillIds.has(skill.id)) {
+            skillIds.add(skill.id);
+            uniqueSkills.push(skill);
+        } else {
+            console.log(`🔄 Removing duplicate skill in createNodes: ${skill.id}`);
+            duplicateSkillCount++;
+        }
+    }
+    
+    if (duplicateSkillCount > 0) {
+        console.log(`✅ Node deduplication: removed ${duplicateSkillCount} duplicates, ${uniqueSkills.length} unique skills remain`);
+    }
+    
     // Use dynamic positions for saved skill trees, static for hardcoded data
     const positions = userSkills.skillTree?.nodes ? 
-        generateDynamicPositions(allSkills) : 
+        generateDynamicPositions(uniqueSkills) : 
         positionMap;
     
-    const skillNodes = allSkills
+    const skillNodes = uniqueSkills
         .filter((skill: any) => skill.category !== 'Category')
         .map((skill: any): SkillNode | null => {
             const position = positions[skill.id];
@@ -347,8 +386,28 @@ const createEdges = (userSkills: UserSkills): Edge[] => {
         console.log('🔗 Built connections from prerequisites:', connections);
     }
 
-    // Create edges from connections
-    const skillEdges = connections.map(connection => ({
+    // Deduplicate connections to prevent duplicate edge IDs
+    const connectionKeys = new Set<string>();
+    const uniqueConnections: Array<{ from: string; to: string }> = [];
+    let duplicateConnectionCount = 0;
+    
+    for (const connection of connections) {
+        const connectionKey = `${connection.from}->${connection.to}`;
+        if (!connectionKeys.has(connectionKey)) {
+            connectionKeys.add(connectionKey);
+            uniqueConnections.push(connection);
+        } else {
+            console.log(`🔄 Removing duplicate connection in createEdges: ${connectionKey}`);
+            duplicateConnectionCount++;
+        }
+    }
+    
+    if (duplicateConnectionCount > 0) {
+        console.log(`✅ Edge deduplication: removed ${duplicateConnectionCount} duplicates, ${uniqueConnections.length} unique connections remain`);
+    }
+
+    // Create edges from unique connections
+    const skillEdges = uniqueConnections.map(connection => ({
         id: `e-${connection.from}-${connection.to}`,
         source: connection.from,
         target: connection.to,
