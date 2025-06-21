@@ -11,6 +11,7 @@ import ReactFlow, {
     Position
 } from 'reactflow';
 import 'reactflow/dist/style.css';
+import { useState } from 'react';
 
 import { skillTreeData } from "@/data/skill-tree-data"
 import type { Skill, UserSkills } from "@/types/skills"
@@ -40,15 +41,50 @@ const convertSavedSkillTree = (userSkills: UserSkills) => {
 const getSkillsData = (userSkills: UserSkills) => {
   const savedSkills = convertSavedSkillTree(userSkills);
   if (savedSkills) {
-    return savedSkills;
+    // Build children relationships for saved skills too
+    const skillMap = new Map(savedSkills.map(skill => [skill.id, { ...skill, children: [] as string[] }]));
+    
+    savedSkills.forEach(skill => {
+      if (skill.prerequisites) {
+        skill.prerequisites.forEach(prereqId => {
+          const prereqSkill = skillMap.get(prereqId);
+          if (prereqSkill && !prereqSkill.children.includes(skill.id)) {
+            prereqSkill.children.push(skill.id);
+          }
+        });
+      }
+    });
+    
+    return Array.from(skillMap.values());
   }
 
-  // Fallback to hardcoded data
-  return [
+  // Fallback to hardcoded data - need to build children relationships
+  const hardcodedSkills = [
     ...skillTreeData.software,
     ...skillTreeData.hardware,
     ...skillTreeData.categories
   ];
+  
+  // Build children relationships for hardcoded data
+  const skillMap = new Map(hardcodedSkills.map(skill => [skill.id, { ...skill, children: [] as string[] }]));
+  
+  hardcodedSkills.forEach(skill => {
+    if (skill.prerequisites) {
+      skill.prerequisites.forEach(prereqId => {
+        const prereqSkill = skillMap.get(prereqId);
+        if (prereqSkill && !prereqSkill.children.includes(skill.id)) {
+          prereqSkill.children.push(skill.id);
+        }
+      });
+    }
+  });
+  
+  console.log('🔧 Built children relationships:', Array.from(skillMap.values()).map(s => ({ 
+    id: s.id, 
+    children: s.children 
+  })));
+  
+  return Array.from(skillMap.values());
 };
 
 const getSkillStatus = (skillId: string, userSkills: UserSkills) => {
@@ -142,109 +178,121 @@ type TreeNode = SkillNode | CategoryNode;
 // Dynamic positioning for saved skill trees - hierarchical layout
 const generateDynamicPositions = (skills: any[]) => {
     const positions: { [key: string]: { x: number, y: number } } = {};
-    
-    // Build dependency graph to determine levels
     const skillMap = new Map(skills.map(skill => [skill.id, skill]));
-    const levels: { [key: string]: number } = {};
-    const visited = new Set<string>();
     
-    // Calculate the level of each skill (how many prerequisites deep)
-    const calculateLevel = (skillId: string): number => {
-        if (visited.has(skillId)) return levels[skillId] || 0;
-        visited.add(skillId);
-        
-        const skill = skillMap.get(skillId);
-        if (!skill || !skill.prerequisites || skill.prerequisites.length === 0) {
-            levels[skillId] = 0; // Base level
-            return 0;
+    // Define main category positions (these are the anchor points)
+    const categoryPositions = {
+        'software': { x: X_OFFSET + 300, y: Y_OFFSET + 800 },
+        'hardware': { x: X_OFFSET + 800, y: Y_OFFSET + 800 },
+        'soft-skills': { x: X_OFFSET + 1300, y: Y_OFFSET + 800 }
+    };
+    
+    // First, position the main category nodes
+    positions['software'] = categoryPositions['software'];
+    positions['hardware'] = categoryPositions['hardware'];
+    positions['soft-skills'] = categoryPositions['soft-skills'];
+    
+    console.log('🏗️ Positioned main categories:', categoryPositions);
+    
+    // Function to determine which main category a skill belongs to
+    const getMainCategory = (skill: any): string => {
+        if (skill.id === 'software' || skill.id === 'hardware' || skill.id === 'soft-skills') {
+            return skill.id;
         }
         
-        // Find the maximum level among prerequisites and add 1
-        const maxPrereqLevel = Math.max(
-            ...skill.prerequisites.map((prereqId: string) => calculateLevel(prereqId))
-        );
-        levels[skillId] = maxPrereqLevel + 1;
-        return levels[skillId];
-    };
-    
-    // Calculate levels for all skills
-    skills.forEach(skill => calculateLevel(skill.id));
-    
-    // Group skills by category and level
-    const categories = ['software', 'hardware', 'soft-skills'];
-    const categoryColumns: { [key: string]: number } = {
-        'software': 0,
-        'hardware': 1,
-        'soft-skills': 2
-    };
-    
-    // Group skills by level for positioning
-    const skillsByLevel: { [level: number]: any[] } = {};
-    const maxLevel = Math.max(...Object.values(levels));
-    
-    skills.forEach(skill => {
-        const level = levels[skill.id];
-        if (!skillsByLevel[level]) skillsByLevel[level] = [];
-        skillsByLevel[level].push(skill);
-    });
-    
-    // Position skills level by level (bottom to top)
-    Object.keys(skillsByLevel).forEach(levelStr => {
-        const level = parseInt(levelStr);
-        const skillsAtLevel = skillsByLevel[level];
+        // For other skills, determine by category or prerequisites
+        if (skill.category === 'software' || skill.category === 'Software') return 'software';
+        if (skill.category === 'hardware' || skill.category === 'Hardware') return 'hardware';
+        if (skill.category === 'soft' || skill.category === 'Soft' || skill.category === 'soft-skills') return 'soft-skills';
         
-        // Group by category at this level
-        const categorizedSkills: { [cat: string]: any[] } = {
-            'software': [],
-            'hardware': [],
-            'soft-skills': []
+        // If category is unclear, trace prerequisites to find main category
+        const traceToMainCategory = (skillId: string, visited = new Set<string>()): string => {
+            if (visited.has(skillId)) return 'software'; // Default fallback
+            visited.add(skillId);
+            
+            const currentSkill = skillMap.get(skillId);
+            if (!currentSkill) return 'software';
+            
+            if (['software', 'hardware', 'soft-skills'].includes(currentSkill.id)) {
+                return currentSkill.id;
+            }
+            
+            if (currentSkill.prerequisites && currentSkill.prerequisites.length > 0) {
+                for (const prereqId of currentSkill.prerequisites) {
+                    const result = traceToMainCategory(prereqId, new Set(visited));
+                    if (result) return result;
+                }
+            }
+            
+            return 'software'; // Default fallback
         };
         
-        skillsAtLevel.forEach(skill => {
-            const category = skill.category === 'soft' ? 'soft-skills' : skill.category;
-            if (categorizedSkills[category]) {
-                categorizedSkills[category].push(skill);
-            }
-        });
+        return traceToMainCategory(skill.id);
+    };
+    
+    // Group skills by their main category
+    const skillsByCategory: { [category: string]: any[] } = {
+        'software': [],
+        'hardware': [],
+        'soft-skills': []
+    };
+    
+    skills.forEach(skill => {
+        if (!['software', 'hardware', 'soft-skills'].includes(skill.id)) {
+            const mainCategory = getMainCategory(skill);
+            skillsByCategory[mainCategory].push(skill);
+        }
+    });
+    
+    console.log('📊 Skills grouped by category:', Object.keys(skillsByCategory).map(cat => ({
+        category: cat,
+        count: skillsByCategory[cat].length
+    })));
+    
+    // Position skills in each category with curved layout
+    Object.keys(skillsByCategory).forEach(category => {
+        const categorySkills = skillsByCategory[category];
+        const mainCategoryPos = categoryPositions[category as keyof typeof categoryPositions];
         
-        // Position skills within each category
-        categories.forEach(category => {
-            const categorySkills = categorizedSkills[category];
-            const columnIndex = categoryColumns[category];
+        if (categorySkills.length === 0) return;
+        
+        console.log(`🎯 Positioning ${categorySkills.length} skills for ${category}`);
+        
+        // Calculate spread width for this category
+        const totalWidth = Math.max(600, categorySkills.length * 120); // Minimum 600px spread
+        const startX = mainCategoryPos.x - totalWidth / 2;
+        
+        // Sort skills by some criteria (name for consistency)
+        categorySkills.sort((a, b) => a.name.localeCompare(b.name));
+        
+        categorySkills.forEach((skill, index) => {
+            // Calculate horizontal position
+            const xProgress = categorySkills.length > 1 ? index / (categorySkills.length - 1) : 0.5;
+            const skillX = startX + (xProgress * totalWidth);
             
-            if (categorySkills.length === 0) return;
+            // Calculate horizontal distance from main category center
+            const horizontalDistance = Math.abs(skillX - mainCategoryPos.x);
             
-            categorySkills.forEach((skill, skillIndex) => {
-                // Calculate how many skills per row based on category skill count
-                const skillsPerRow = categorySkills.length <= 2 ? categorySkills.length : 
-                                   categorySkills.length <= 4 ? 2 : 3;
-                
-                const row = Math.floor(skillIndex / skillsPerRow);
-                const col = skillIndex % skillsPerRow;
-                
-                // Calculate Y position (higher levels go up, so invert)
-                const yPosition = Y_OFFSET + (maxLevel - level) * ROW_HEIGHT * 1.5;
-                
-                // Calculate X position with dynamic spacing based on skills per row
-                const baseX = X_OFFSET + columnIndex * (COL_WIDTH * 3);
-                
-                // Center the skills in their column
-                const totalRowWidth = (skillsPerRow - 1) * COL_WIDTH * 0.9;
-                const startX = baseX - (totalRowWidth / 2);
-                const offsetX = col * (COL_WIDTH * 0.9);
-                
-                const finalPosition = {
-                    x: startX + offsetX,
-                    y: yPosition + row * (ROW_HEIGHT * 0.6) // Increased vertical spacing between rows
-                };
-                
-                // Add deterministic offset based on skill ID to prevent overlaps
-                const skillSeed = skill.id.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
-                finalPosition.x += (skillSeed % 30) - 15; // -15 to +15 offset
-                finalPosition.y += ((skillSeed * 2) % 20) - 10; // -10 to +10 offset
-                
-                positions[skill.id] = finalPosition;
-            });
+            // Create curved effect: the further horizontally, the higher vertically (lower Y value)
+            // Use a quadratic curve for smooth effect
+            const maxCurveHeight = 400; // Maximum vertical displacement
+            const normalizedDistance = Math.min(horizontalDistance / (totalWidth / 2), 1);
+            const curveOffset = Math.pow(normalizedDistance, 1.5) * maxCurveHeight;
+            
+            // Position the skill
+            const skillY = mainCategoryPos.y - curveOffset - 100; // Base offset from category
+            
+            // Add some randomization to avoid perfectly straight lines
+            const skillSeed = skill.id.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
+            const randomOffsetX = (Math.sin(skillSeed * 1.337) * 30) - 15; // ±15px horizontal
+            const randomOffsetY = (Math.cos(skillSeed * 2.718) * 20) - 10; // ±10px vertical
+            
+            positions[skill.id] = {
+                x: skillX + randomOffsetX,
+                y: skillY + randomOffsetY
+            };
+            
+            console.log(`📍 ${skill.id}: x=${Math.round(skillX)}, y=${Math.round(skillY)}, distance=${Math.round(horizontalDistance)}, curve=${Math.round(curveOffset)}`);
         });
     });
     
@@ -414,8 +462,8 @@ const createEdges = (userSkills: UserSkills): Edge[] => {
         type: 'smoothstep',
         style: baseStyle,
         animated: false,
-        sourceHandle: 'bottom',
-        targetHandle: 'top',
+        sourceHandle: null, // Let ReactFlow auto-select the bottom handle
+        targetHandle: null, // Let ReactFlow auto-select the top handle
         markerEnd: {
             type: MarkerType.ArrowClosed,
             width: 15,
@@ -430,24 +478,149 @@ const createEdges = (userSkills: UserSkills): Edge[] => {
 interface SkillTreeVisualizationProps {
     userSkills: UserSkills
     onSkillClick: (skill: Skill) => void
+    highlightedSkills?: string[] | null
 }
 
-const SkillTreeVisualization = ({ userSkills, onSkillClick }: SkillTreeVisualizationProps) => {
-    // Initialize nodes with status
+const SkillTreeVisualization = ({ userSkills, onSkillClick, highlightedSkills }: SkillTreeVisualizationProps) => {
+    const [hoveredNode, setHoveredNode] = useState<string | null>(null);
+    const [highlightedNodes, setHighlightedNodes] = useState<Set<string>>(new Set());
+
+    // Function to get all children (descendants) of a node recursively
+    const getAllChildren = (nodeId: string, allSkills: any[]): string[] => {
+        const skillMap = new Map(allSkills.map(skill => [skill.id, skill]));
+        const children: string[] = [];
+        const visited = new Set<string>();
+        
+        // Build children relationships from prerequisites if not already set
+        const childrenMap = new Map<string, string[]>();
+        allSkills.forEach(skill => {
+            if (skill.prerequisites) {
+                skill.prerequisites.forEach((prereqId: string) => {
+                    if (!childrenMap.has(prereqId)) {
+                        childrenMap.set(prereqId, []);
+                    }
+                    childrenMap.get(prereqId)!.push(skill.id);
+                });
+            }
+        });
+        
+        const findChildren = (skillId: string) => {
+            if (visited.has(skillId)) return;
+            visited.add(skillId);
+            
+            // Try to get children from the skill object first
+            const skill = skillMap.get(skillId);
+            let skillChildren: string[] = [];
+            
+            if (skill && skill.children) {
+                skillChildren = skill.children;
+            } else {
+                // Fallback: use children built from prerequisites
+                skillChildren = childrenMap.get(skillId) || [];
+            }
+            
+            skillChildren.forEach((childId: string) => {
+                if (!children.includes(childId)) {
+                    children.push(childId);
+                    findChildren(childId); // Recursively find grandchildren
+                }
+            });
+        };
+        
+        findChildren(nodeId);
+        return children;
+    };
+
+    // Handle node hover
+    const handleNodeMouseEnter = (nodeId: string) => {
+        console.log('🎯 Hovering over node:', nodeId);
+        setHoveredNode(nodeId);
+        const allSkills = getSkillsData(userSkills);
+        
+        // Debug: Log the skill data structure
+        const hoveredSkill = allSkills.find(skill => skill.id === nodeId);
+        console.log('📊 Hovered skill data:', hoveredSkill);
+        console.log('📊 All skills with children:', allSkills.map(s => ({ id: s.id, children: (s as any).children })));
+        
+        const childrenIds = getAllChildren(nodeId, allSkills);
+        console.log('👶 Found children for', nodeId, ':', childrenIds);
+        
+        const highlightSet = new Set([nodeId, ...childrenIds]);
+        console.log('✨ Highlighting nodes:', Array.from(highlightSet));
+        setHighlightedNodes(highlightSet);
+    };
+
+    const handleNodeMouseLeave = () => {
+        console.log('🚪 Mouse left node');
+        setHoveredNode(null);
+        setHighlightedNodes(new Set());
+    };
+
+    // Initialize nodes with status and hover handlers
     const nodes = createNodes(userSkills).map(node => {
         if (node.type === 'custom') {
+            const skillId = node.data.skill.id;
+            const isUserSkillHighlighted = highlightedSkills?.includes(skillId) || false;
+            const isHoverHighlighted = highlightedNodes.has(skillId);
+            const isHovered = hoveredNode === skillId;
+            
+            // Determine highlighting state: user skill highlighting takes precedence over hover
+            let isHighlighted = false;
+            let isDimmed = false;
+            
+            if (highlightedSkills) {
+                // User skill highlighting mode
+                isHighlighted = isUserSkillHighlighted;
+                isDimmed = !isUserSkillHighlighted;
+            } else if (hoveredNode !== null) {
+                // Hover highlighting mode (only when no user is selected)
+                isHighlighted = isHoverHighlighted;
+                isDimmed = !isHoverHighlighted;
+            }
+            
             return {
                 ...node,
                 data: {
                     ...node.data,
-                    status: getSkillStatus(node.data.skill.id, userSkills),
+                    status: getSkillStatus(skillId, userSkills),
+                    isHighlighted,
+                    isHovered,
+                    isDimmed,
+                    onMouseEnter: () => handleNodeMouseEnter(skillId),
+                    onMouseLeave: handleNodeMouseLeave,
                 }
             };
         }
         return node;
     });
 
-    const edges = createEdges(userSkills);
+    // Create edges with highlighting for hover state and user skills
+    const edges = createEdges(userSkills).map(edge => {
+        let isHighlighted = false;
+        
+        if (highlightedSkills) {
+            // User skill highlighting mode - highlight edges between user's skills
+            isHighlighted = highlightedSkills.includes(edge.source) && highlightedSkills.includes(edge.target);
+        } else {
+            // Hover highlighting mode
+            isHighlighted = highlightedNodes.has(edge.source) && highlightedNodes.has(edge.target);
+        }
+        
+        if (isHighlighted) {
+            console.log('🔗 Highlighting edge:', edge.source, '→', edge.target);
+        }
+        
+        return {
+            ...edge,
+            style: {
+                ...edge.style,
+                stroke: isHighlighted ? '#fbbf24' : '#ffffff', // Yellow when highlighted
+                strokeWidth: isHighlighted ? 3 : 1.2,
+                opacity: isHighlighted ? 1 : (highlightedSkills || hoveredNode ? 0.3 : 0.7),
+            },
+            animated: isHighlighted,
+        };
+    });
     
     // Debug logs (can be removed in production)
     // console.log('🎯 Nodes created:', nodes.map(n => ({ id: n.id, type: n.type })));
@@ -461,7 +634,7 @@ const SkillTreeVisualization = ({ userSkills, onSkillClick }: SkillTreeVisualiza
     };
 
     return (
-        <div className="w-full h-[1200px] relative">
+        <div className="w-full h-[1200px] relative overflow-x-auto">
             <div className="absolute inset-0 bg-gradient-to-br from-slate-950/30 via-slate-950/30 to-slate-900/30 rounded-lg" />
             <ReactFlow
                 nodes={nodes}
@@ -483,7 +656,10 @@ const SkillTreeVisualization = ({ userSkills, onSkillClick }: SkillTreeVisualiza
                     },
                 }}
                 fitView
+                minZoom={0.01}
+                maxZoom={10}
                 className="bg-transparent [&_.react-flow__attribution]:hidden"
+                style={{ minWidth: '1200px' }}
             >
                 <Background 
                     color="#334155" 

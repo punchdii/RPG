@@ -5,6 +5,71 @@ import GlobalTree from '@/models/global-tree'
 import type { UserSkills } from '@/types/skills'
 import type { IGlobalTree, ISkillNode, ISkillConnection } from '@/models/global-tree'
 
+// Helper function to recursively ensure prerequisite chain exists
+function ensurePrerequisiteChain(skillId: string, userSkillTree: any, globalTree: any, visited = new Set<string>()): void {
+  // Prevent infinite loops
+  if (visited.has(skillId)) {
+    console.log(`⚠️ Circular dependency detected for skill: ${skillId}`)
+    return
+  }
+  visited.add(skillId)
+
+  // Check if skill already exists in global tree
+  let existingNode = globalTree.nodes.find((n: any) => n.id === skillId)
+  if (existingNode) {
+    return // Already exists, no need to create
+  }
+
+  // Find the skill in user's skill tree
+  const userSkill = userSkillTree.nodes?.find((n: any) => n.id === skillId)
+  if (!userSkill) {
+    // Skill not found in user tree, check if it's a foundation category
+    const foundationCategories = ['software', 'hardware', 'soft-skills']
+    if (foundationCategories.includes(skillId)) {
+      // Create foundation category node
+      const foundationNode = {
+        id: skillId,
+        name: skillId.charAt(0).toUpperCase() + skillId.slice(1).replace('-', ' '),
+        category: 'Category',
+        description: `${skillId} foundation category`,
+        prerequisites: [],
+        children: [],
+        earnedByCount: 0,
+        totalUserCount: 1
+      }
+      globalTree.nodes.push(foundationNode)
+      console.log(`🏗️ Created foundation category: ${skillId}`)
+      return
+    } else {
+      // ERROR: Skill not found and not a foundation - this shouldn't happen
+      console.error(`❌ CRITICAL ERROR: Skill ${skillId} not found in user tree and not a foundation category!`)
+      throw new Error(`Prerequisite chain broken: ${skillId} not found and not a foundation category`)
+    }
+  }
+
+  // Recursively ensure all prerequisites of this skill exist first
+  if (userSkill.prerequisites && userSkill.prerequisites.length > 0) {
+    for (const prereqId of userSkill.prerequisites) {
+      ensurePrerequisiteChain(prereqId, userSkillTree, globalTree, new Set(visited))
+    }
+  }
+
+  // Now create this skill node (all its prerequisites should exist now)
+  const newNode = {
+    id: userSkill.id,
+    name: userSkill.name,
+    category: userSkill.category,
+    description: userSkill.description || `${userSkill.name} (prerequisite auto-created)`,
+    prerequisites: userSkill.prerequisites || [],
+    children: [],
+    earnedByCount: userSkill.earned ? 1 : 0,
+    totalUserCount: 1
+  }
+  
+  globalTree.nodes.push(newNode)
+  console.log(`🔗 Auto-created prerequisite: ${skillId} (earned: ${userSkill.earned})`)
+}
+
 // Helper function to merge user skills into global tree
 async function updateGlobalTree(userSkillTree: any, userEmail?: string) {
   console.log('🌍 Updating global tree with user skills...')
@@ -39,45 +104,56 @@ async function updateGlobalTree(userSkillTree: any, userEmail?: string) {
     console.log(`📊 Processing ${userSkillTree.nodes.length} user nodes for global tree combination...`)
     
     for (const userNode of userSkillTree.nodes) {
-      // Find existing node by ID - combine if exists
-      let globalNode = globalTree.nodes.find((n: ISkillNode) => n.id === userNode.id)
-      
-      if (!globalNode) {
-        // Create new combined node
-        console.log(`➕ Adding new skill to global tree: ${userNode.id} (${userNode.name})`)
-        globalNode = {
-          id: userNode.id,
-          name: userNode.name,
-          category: userNode.category,
-          description: userNode.description || '',
-          prerequisites: userNode.prerequisites || [],
-          earnedByCount: userNode.earned ? 1 : 0,
-          totalUserCount: 1
+      // Only process earned skills for new additions
+      if (!userNode.earned) {
+        console.log(`⏭️ Skipping unearned skill: ${userNode.id}`)
+        continue
+      }
+
+      try {
+        // Ensure complete prerequisite chain exists before adding this skill
+        console.log(`🔍 Ensuring prerequisite chain for: ${userNode.id}`)
+        ensurePrerequisiteChain(userNode.id, userSkillTree, globalTree)
+        
+        // Now find the node (should exist after prerequisite chain creation)
+        let globalNode = globalTree.nodes.find((n: ISkillNode) => n.id === userNode.id)
+        
+        if (!globalNode) {
+          // This shouldn't happen after ensurePrerequisiteChain, but safety check
+          console.error(`❌ CRITICAL ERROR: Node ${userNode.id} still doesn't exist after prerequisite chain creation`)
+          continue
         }
-        globalTree.nodes.push(globalNode)
-      } else {
-        // Combine with existing node - increment counts
-        console.log(`🔗 Combining skill in global tree: ${userNode.id} (user count: ${globalNode.totalUserCount + 1})`)
-        globalNode.totalUserCount += 1
-        if (userNode.earned) {
+
+        // Update counters for existing node (the ensurePrerequisiteChain creates with count 1)
+        if (globalNode.earnedByCount === 1 && globalNode.totalUserCount === 1) {
+          // This was just created by ensurePrerequisiteChain, counts are already correct
+          console.log(`✅ New skill added to global tree: ${userNode.id} (${userNode.name})`)
+        } else {
+          // This is an existing skill, increment counters
+          console.log(`🔗 Combining skill in global tree: ${userNode.id} (user count: ${globalNode.totalUserCount + 1})`)
+          globalNode.totalUserCount += 1
           globalNode.earnedByCount += 1
-        }
-        
-        // Enhance node metadata from this user's data
-        if (userNode.description && userNode.description.length > (globalNode.description?.length || 0)) {
-          // Use the more detailed description
-          globalNode.description = userNode.description
-        }
-        
-        // Merge prerequisites without duplicates
-        if (userNode.prerequisites && userNode.prerequisites.length > 0) {
-          const existingPrereqs = globalNode.prerequisites || []
-          const newPrereqs = userNode.prerequisites.filter((p: string) => !existingPrereqs.includes(p))
-          if (newPrereqs.length > 0) {
-            globalNode.prerequisites = [...existingPrereqs, ...newPrereqs]
-            console.log(`🔗 Added ${newPrereqs.length} new prerequisites to ${userNode.id}`)
+          
+          // Enhance node metadata from this user's data
+          if (userNode.description && userNode.description.length > (globalNode.description?.length || 0)) {
+            // Use the more detailed description
+            globalNode.description = userNode.description
+          }
+          
+          // Merge prerequisites without duplicates
+          if (userNode.prerequisites && userNode.prerequisites.length > 0) {
+            const existingPrereqs = globalNode.prerequisites || []
+            const newPrereqs = userNode.prerequisites.filter((p: string) => !existingPrereqs.includes(p))
+            if (newPrereqs.length > 0) {
+              globalNode.prerequisites = [...existingPrereqs, ...newPrereqs]
+              console.log(`🔗 Added ${newPrereqs.length} new prerequisites to ${userNode.id}`)
+            }
           }
         }
+      } catch (error) {
+        console.error(`❌ Error processing skill ${userNode.id}:`, error)
+        // Continue processing other skills even if one fails
+        continue
       }
     }
   }

@@ -19,6 +19,7 @@ export interface IUser {
         category: 'software' | 'hardware' | 'soft'
         earned: boolean
         prerequisites?: string[]
+        children?: string[]
         description?: string
       }>
       connections: Array<{ from: string; to: string }>

@@ -6,6 +6,7 @@ export interface ISkillNode {
   category: 'software' | 'hardware' | 'soft'
   description?: string
   prerequisites?: string[]
+  children?: string[]
   earnedByCount: number // Number of users who have earned this skill
   totalUserCount: number // Total number of users who have this skill in their tree
 }
@@ -29,6 +30,7 @@ const SkillNodeSchema = new Schema<ISkillNode>({
   category: { type: String, required: true, enum: ['software', 'hardware', 'soft'] },
   description: { type: String, default: '' },
   prerequisites: { type: [String], default: [] },
+  children: { type: [String], default: [] },
   earnedByCount: { type: Number, default: 0 },
   totalUserCount: { type: Number, default: 0 }
 })

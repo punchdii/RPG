@@ -10,6 +10,7 @@ interface SkillNode {
   category: 'software' | 'hardware' | 'soft'
   earned: boolean
   prerequisites?: string[]
+  children?: string[]
   description?: string
 }
 
@@ -52,6 +53,7 @@ Please respond with a JSON object in this exact format:
       "category": "software|hardware|soft",
       "earned": true|false,
       "prerequisites": ["prerequisite-skill-id"],
+      "children": ["child-skill-id-1", "child-skill-id-2"],
       "description": "Brief description"
     }
   ],
@@ -62,11 +64,13 @@ Please respond with a JSON object in this exact format:
 
 Rules:
 1. Include 3 main category nodes: "software", "hardware", "soft-skills"
-2. Mark skills as "earned: true" if they appear in the re"earned: false" for beneficial skills not yet acquired
-4. Include realistic prerequisites and connections
+2. Mark skills as "earned: true" if they appear in the resume, "earned: false" for beneficial skills not yet acquired
+3. Include both "prerequisites" (parent skills needed) AND "children" (skills that depend on this one)
+4. Include realistic prerequisites and connections that form a proper tree structure
 5. Aim for 15-25 total skill nodes
 6. Use kebab-case for IDs (e.g., "machine-learning", "project-management")
-7. Only return valid JSON, no additional text`
+7. Make sure prerequisites and children relationships are consistent (if A is prerequisite of B, then B should be in A's children)
+8. Only return valid JSON, no additional text`
 
     const result = await model.generateContent(prompt)
     const response = await result.response
@@ -91,6 +95,31 @@ Rules:
       // Fallback to basic analysis
       return fallbackAnalysis(resumeText)
     }
+
+    // Build bidirectional relationships if not provided by AI
+    const nodeMap = new Map(skillTreeData.nodes.map(node => [node.id, node]))
+    
+    // Ensure children arrays exist and are consistent with prerequisites
+    skillTreeData.nodes.forEach(node => {
+      if (!node.children) node.children = []
+    })
+    
+    // Build children from prerequisites
+    skillTreeData.nodes.forEach(node => {
+      if (node.prerequisites) {
+        node.prerequisites.forEach(prereqId => {
+          const prereqNode = nodeMap.get(prereqId)
+          if (prereqNode) {
+            if (!prereqNode.children) prereqNode.children = []
+            if (!prereqNode.children.includes(node.id)) {
+              prereqNode.children.push(node.id)
+            }
+          }
+        })
+      }
+    })
+    
+    console.log('✅ Built bidirectional relationships')
 
     // Convert to UserSkills format
     const earnedSkills = skillTreeData.nodes

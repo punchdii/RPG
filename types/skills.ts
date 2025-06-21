@@ -4,6 +4,8 @@ export interface Skill {
   description: string
   prerequisites: string[]
   category: string
+  userCount?: number // Number of users who have this skill (for global tree styling)
+  children?: string[] // Children skills that depend on this skill
 }
 
 export interface LearningResource {
@@ -24,6 +26,7 @@ export interface UserSkills {
       category: 'software' | 'hardware' | 'soft'
       earned: boolean
       prerequisites?: string[]
+      children?: string[]
       description?: string
     }>
     connections: Array<{ from: string; to: string }>

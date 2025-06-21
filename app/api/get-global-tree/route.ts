@@ -61,7 +61,8 @@ export async function GET(req: NextRequest) {
           category: node.category,
           earned: false, // Global tree doesn't have individual earned status
           prerequisites: node.prerequisites || [],
-          description: node.description + ` • ${node.totalUserCount} users • ${node.earnedByCount} earned (${Math.round((node.earnedByCount / node.totalUserCount) * 100)}% mastery rate)`
+          description: node.description + ` • ${node.totalUserCount} users • ${node.earnedByCount} earned (${Math.round((node.earnedByCount / node.totalUserCount) * 100)}% mastery rate)`,
+          userCount: node.totalUserCount // Add user count for visual styling
         })),
         connections: uniqueConnections.map((conn: ISkillConnection) => ({
           from: conn.from,
