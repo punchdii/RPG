@@ -33,20 +33,20 @@ export default function ContactForm() {
           name="name"
           required
           placeholder="Your name"
-          className="w-full rounded-md bg-slate-800 border border-slate-700 p-3 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-600"
+          className="w-full rounded-md bg-white/90 border-0 p-3 text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-orange-600"
         />
         <input
           name="subject"
           required
           placeholder="Subject"
-          className="w-full rounded-md bg-slate-800 border border-slate-700 p-3 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-600"
+          className="w-full rounded-md bg-white/90 border-0 p-3 text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-orange-600"
         />
         <textarea
           name="message"
           required
           rows={6}
           placeholder="Your message"
-          className="w-full rounded-md bg-slate-800 border border-slate-700 p-3 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-600"
+          className="w-full rounded-md bg-white/90 border-0 p-3 text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-orange-600"
         />
       </div>
 
@@ -56,7 +56,7 @@ export default function ContactForm() {
           name="link"
           type="url"
           placeholder="Paste a link"
-          className="w-full rounded-md bg-slate-800 border border-slate-700 p-3 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-600"
+          className="w-full rounded-md bg-white/90 border-0 p-3 text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-orange-600"
         />
       )}
 
@@ -75,17 +75,46 @@ export default function ContactForm() {
           type="button"
           aria-label="Upload Images"
           onClick={() => fileInputRef.current?.click()}
-          className="bg-slate-700 hover:bg-slate-600 text-white p-3 rounded-md"
+          className="bg-orange-600 hover:bg-orange-700 text-white p-3 rounded-md transition-colors"
         >
-          <img src="/ImageUpload.png" alt="Upload images" className="w-6 h-6" />
+          <svg 
+            xmlns="http://www.w3.org/2000/svg" 
+            width="24" 
+            height="24" 
+            viewBox="0 0 24 24" 
+            fill="none" 
+            stroke="currentColor" 
+            strokeWidth="2" 
+            strokeLinecap="round" 
+            strokeLinejoin="round" 
+            className="w-6 h-6"
+          >
+            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7" />
+            <polyline points="17 8 12 3 7 8" />
+            <line x1="12" y1="3" x2="12" y2="15" />
+          </svg>
         </button>
         <button
           type="button"
           aria-label={showLink ? "Remove Link" : "Add Link"}
           onClick={() => setShowLink((prev) => !prev)}
-          className="bg-slate-700 hover:bg-slate-600 text-white p-3 rounded-md"
+          className="bg-orange-600 hover:bg-orange-700 text-white p-3 rounded-md transition-colors"
         >
-          <img src="/Link.png" alt="Link" className="w-6 h-6" />
+          <svg 
+            xmlns="http://www.w3.org/2000/svg" 
+            width="24" 
+            height="24" 
+            viewBox="0 0 24 24" 
+            fill="none" 
+            stroke="currentColor" 
+            strokeWidth="2" 
+            strokeLinecap="round" 
+            strokeLinejoin="round" 
+            className="w-6 h-6"
+          >
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+          </svg>
         </button>
       </div>
 

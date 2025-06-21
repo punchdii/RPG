@@ -36,9 +36,12 @@ export function Navigation() {
             <Link href="/" className="text-slate-300 hover:text-white hover:underline underline-offset-4 transition-colors capitalize">
               Global Tree
             </Link>
-            <Link href="/local" className="text-slate-300 hover:text-white hover:underline underline-offset-4 transition-colors capitalize">
+            <button
+              onClick={() => user ? router.push('/skill-tree') : router.push('/signin')}
+              className="text-slate-300 hover:text-white hover:underline underline-offset-4 transition-colors capitalize"
+            >
               Local Tree
-            </Link>
+            </button>
             <Link href="/contact" className="text-slate-300 hover:text-white hover:underline underline-offset-4 transition-colors capitalize">
               Contact
             </Link>
