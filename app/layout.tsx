@@ -22,7 +22,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className={`min-h-screen bg-slate-900 bg-[url('/Background.png')] bg-cover bg-center bg-no-repeat ${lexendDeca.className}`}>
+      <body className={`min-h-screen bg-black bg-[url('/Background.png')] bg-cover bg-center bg-no-repeat ${lexendDeca.className}`}>
         <AuthProvider>
           <Navigation />
           {children}

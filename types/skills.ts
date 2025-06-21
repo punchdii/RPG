@@ -17,4 +17,15 @@ export interface UserSkills {
   earnedSkills: string[]
   availableSkills: string[]
   skillPoints: number
+  skillTree?: {
+    nodes: Array<{
+      id: string
+      name: string
+      category: 'software' | 'hardware' | 'soft'
+      earned: boolean
+      prerequisites?: string[]
+      description?: string
+    }>
+    connections: Array<{ from: string; to: string }>
+  }
 }

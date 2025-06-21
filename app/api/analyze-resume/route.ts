@@ -1,5 +1,5 @@
+import { NextRequest, NextResponse } from 'next/server'
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import type { UserSkills } from "@/types/skills"
 
 // Initialize Gemini AI
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
@@ -18,8 +18,9 @@ interface SkillTreeResponse {
   connections: Array<{ from: string; to: string }>
 }
 
-export async function analyzeResume(resumeText: string): Promise<UserSkills> {
-  console.log('🚀 analyzeResume called with text length:', resumeText.length)
+export async function POST(req: NextRequest) {
+  const { resumeText } = await req.json()
+  console.log('🚀 API route called with text length:', resumeText.length)
   
   try {
     // Debug API key loading
@@ -32,11 +33,11 @@ export async function analyzeResume(resumeText: string): Promise<UserSkills> {
     
     if (!apiKey) {
       console.error('❌ GEMINI_API_KEY is not set, using fallback')
-      return fallbackAnalysis(resumeText)
+      return NextResponse.json(fallbackAnalysis(resumeText))
     }
 
     console.log('🤖 Calling Gemini AI...')
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' })
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
 
     const prompt = `Create a skill tree of tech (software, hardware, and soft skills should be the first nodes with other nodes following them) for the resume attached to this prompt. The graph should also include a few skills that aren't reached yet by this resume and that would be beneficial for users to have.
 
@@ -89,8 +90,7 @@ Rules:
     } catch (parseError) {
       console.error('❌ Failed to parse Gemini response:', parseError)
       console.error('Raw response:', text)
-      // Fallback to basic analysis
-      return fallbackAnalysis(resumeText)
+      return NextResponse.json(fallbackAnalysis(resumeText))
     }
 
     // Convert to UserSkills format
@@ -106,23 +106,22 @@ Rules:
 
     console.log('✅ Analysis complete - Earned:', earnedSkills.length, 'Available:', availableSkills.length)
 
-    return {
+    return NextResponse.json({
       earnedSkills,
       availableSkills,
       skillPoints,
-      skillTree: skillTreeData // Store the full tree data for visualization
-    }
+      skillTree: skillTreeData
+    })
 
   } catch (error) {
     console.error('❌ Gemini API error:', error)
-    // Fallback to basic analysis
     console.log('🔄 Using fallback analysis')
-    return fallbackAnalysis(resumeText)
+    return NextResponse.json(fallbackAnalysis(resumeText))
   }
 }
 
 // Fallback function if Gemini fails
-function fallbackAnalysis(resumeText: string): UserSkills {
+function fallbackAnalysis(resumeText: string) {
   const text = resumeText.toLowerCase()
 
   const skillMappings = {
@@ -156,4 +155,4 @@ function fallbackAnalysis(resumeText: string): UserSkills {
     availableSkills,
     skillPoints: earnedSkills.length * 10 + availableSkills.length * 5
   }
-}
+} 
