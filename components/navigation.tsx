@@ -36,7 +36,7 @@ export function Navigation() {
             <Link href="/" className="text-slate-300 hover:text-white hover:underline underline-offset-4 transition-colors">
               global tree
             </Link>
-            <Link href="/local" className="text-slate-300 hover:text-white hover:underline underline-offset-4 transition-colors">
+            <Link href="/skill-tree" className="text-slate-300 hover:text-white hover:underline underline-offset-4 transition-colors">
               local tree
             </Link>
             <Link href="/contact" className="text-slate-300 hover:text-white hover:underline underline-offset-4 transition-colors">
