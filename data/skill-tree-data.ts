@@ -41,7 +41,7 @@ export const skillTreeData = {
       id: "gamedev",
       name: "GameDev",
       description: "Basic Game Development and design skills",
-      prerequisites: ["unity-engine"],
+      prerequisites: ["unity-engine", "csharp"],
       category: "Software",
     },
     {

@@ -16,7 +16,7 @@ export function UserProfile({ userSkills }: UserProfileProps) {
   const level = Math.floor(skillPoints / 50) + 1
 
   return (
-    <Card className="bg-slate-800/30 border-slate-700/50 backdrop-blur-sm">
+    <Card className="bg-slate-950/30 border-slate-700/50 backdrop-blur-sm">
       <CardHeader className="pb-4">
         <CardTitle className="text-white flex items-center gap-2 justify-between">
           <div className="flex items-center gap-2">

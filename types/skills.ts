@@ -2,11 +2,8 @@ export interface Skill {
   id: string
   name: string
   description: string
-  level: number
-  category?: string
   prerequisites: string[]
-  learningResources?: LearningResource[]
-  relatedSkills?: string[]
+  category: string
 }
 
 export interface LearningResource {

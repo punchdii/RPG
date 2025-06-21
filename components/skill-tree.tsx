@@ -10,7 +10,7 @@ interface SkillTreeProps {
 
 export function SkillTree({ userSkills, onSkillClick }: SkillTreeProps) {
   return (
-    <div className="bg-slate-800/30 rounded-lg p-6 min-h-[600px] relative overflow-auto">
+    <div className="bg-transparent rounded-lg relative">
       <SkillTreeVisualization userSkills={userSkills} onSkillClick={onSkillClick} />
     </div>
   )

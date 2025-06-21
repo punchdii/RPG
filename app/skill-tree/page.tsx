@@ -48,9 +48,9 @@ export default function SkillTreePage() {
   return (
     <div className="min-h-screen py-8">
       <div className="container mx-auto px-4">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 h-full">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
           {/* Left sidebar - User Profile */}
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 sticky top-8">
             <UserProfile userSkills={userSkills} />
           </div>
           

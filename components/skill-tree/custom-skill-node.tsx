@@ -12,9 +12,11 @@ export function CustomSkillNode({ data }: { data: { skill: Skill, status: 'earne
     locked: "border-purple-500",
   }
 
+  const borderColor = skill.category === 'Hardware' ? 'border-purple-500' : 'border-red-500';
+
   return (
     <div
-      className={`rounded-xl p-4 w-48 h-24 text-center flex flex-col justify-center items-center border ${statusClasses[status]} bg-black/20 backdrop-blur-sm`}
+      className={`rounded-xl p-4 w-48 h-24 text-center flex flex-col justify-center items-center border ${borderColor} bg-black/20 backdrop-blur-sm`}
     >
       <Handle type="target" position={Position.Top} className="!bg-transparent" />
       <h3 className="text-md font-medium text-white">{skill.name}</h3>
