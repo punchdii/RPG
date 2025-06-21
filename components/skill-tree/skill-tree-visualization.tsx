@@ -20,12 +20,36 @@ const nodeTypes = {
   custom: CustomSkillNode,
 };
 
-// Combine all skills into a single array
-const allSkills = [
-  ...skillTreeData.software,
-  ...skillTreeData.hardware,
-  ...skillTreeData.categories
-];
+// Function to convert saved skill tree to the format we need
+const convertSavedSkillTree = (userSkills: UserSkills) => {
+  if (!userSkills.skillTree?.nodes) {
+    return null;
+  }
+
+  return userSkills.skillTree.nodes.map(node => ({
+    id: node.id,
+    name: node.name,
+    description: node.description || '',
+    category: node.category,
+    prerequisites: node.prerequisites || [],
+    earned: node.earned
+  }));
+};
+
+// Get skills data - use saved data if available, otherwise use hardcoded data
+const getSkillsData = (userSkills: UserSkills) => {
+  const savedSkills = convertSavedSkillTree(userSkills);
+  if (savedSkills) {
+    return savedSkills;
+  }
+
+  // Fallback to hardcoded data
+  return [
+    ...skillTreeData.software,
+    ...skillTreeData.hardware,
+    ...skillTreeData.categories
+  ];
+};
 
 const getSkillStatus = (skillId: string, userSkills: UserSkills) => {
     if (userSkills.earnedSkills.includes(skillId)) return "earned"
@@ -34,10 +58,10 @@ const getSkillStatus = (skillId: string, userSkills: UserSkills) => {
 }
 
 // Grid layout constants for better spacing
-const COL_WIDTH = 250;
-const ROW_HEIGHT = 150;
-const X_OFFSET = 50;
-const Y_OFFSET = 100;
+const COL_WIDTH = 280;
+const ROW_HEIGHT = 180;
+const X_OFFSET = 100;
+const Y_OFFSET = 150;
 
 // Function to add controlled randomness to positions
 const addRandomOffset = (baseX: number, baseY: number, seed: number): { x: number, y: number } => {
@@ -95,13 +119,144 @@ interface CategoryNode extends Node<CategoryNodeData> {
 
 type TreeNode = SkillNode | CategoryNode;
 
+// Dynamic positioning for saved skill trees - hierarchical layout
+const generateDynamicPositions = (skills: any[]) => {
+    const positions: { [key: string]: { x: number, y: number } } = {};
+    
+    // Build dependency graph to determine levels
+    const skillMap = new Map(skills.map(skill => [skill.id, skill]));
+    const levels: { [key: string]: number } = {};
+    const visited = new Set<string>();
+    
+    // Calculate the level of each skill (how many prerequisites deep)
+    const calculateLevel = (skillId: string): number => {
+        if (visited.has(skillId)) return levels[skillId] || 0;
+        visited.add(skillId);
+        
+        const skill = skillMap.get(skillId);
+        if (!skill || !skill.prerequisites || skill.prerequisites.length === 0) {
+            levels[skillId] = 0; // Base level
+            return 0;
+        }
+        
+        // Find the maximum level among prerequisites and add 1
+        const maxPrereqLevel = Math.max(
+            ...skill.prerequisites.map((prereqId: string) => calculateLevel(prereqId))
+        );
+        levels[skillId] = maxPrereqLevel + 1;
+        return levels[skillId];
+    };
+    
+    // Calculate levels for all skills
+    skills.forEach(skill => calculateLevel(skill.id));
+    
+    // Group skills by category and level
+    const categories = ['software', 'hardware', 'soft-skills'];
+    const categoryColumns: { [key: string]: number } = {
+        'software': 0,
+        'hardware': 1,
+        'soft-skills': 2
+    };
+    
+    // Group skills by level for positioning
+    const skillsByLevel: { [level: number]: any[] } = {};
+    const maxLevel = Math.max(...Object.values(levels));
+    
+    skills.forEach(skill => {
+        const level = levels[skill.id];
+        if (!skillsByLevel[level]) skillsByLevel[level] = [];
+        skillsByLevel[level].push(skill);
+    });
+    
+    // Position skills level by level (bottom to top)
+    Object.keys(skillsByLevel).forEach(levelStr => {
+        const level = parseInt(levelStr);
+        const skillsAtLevel = skillsByLevel[level];
+        
+        // Group by category at this level
+        const categorizedSkills: { [cat: string]: any[] } = {
+            'software': [],
+            'hardware': [],
+            'soft-skills': []
+        };
+        
+        skillsAtLevel.forEach(skill => {
+            const category = skill.category === 'soft' ? 'soft-skills' : skill.category;
+            if (categorizedSkills[category]) {
+                categorizedSkills[category].push(skill);
+            }
+        });
+        
+        // Position skills within each category
+        categories.forEach(category => {
+            const categorySkills = categorizedSkills[category];
+            const columnIndex = categoryColumns[category];
+            
+            if (categorySkills.length === 0) return;
+            
+            categorySkills.forEach((skill, skillIndex) => {
+                // Calculate how many skills per row based on category skill count
+                const skillsPerRow = categorySkills.length <= 2 ? categorySkills.length : 
+                                   categorySkills.length <= 4 ? 2 : 3;
+                
+                const row = Math.floor(skillIndex / skillsPerRow);
+                const col = skillIndex % skillsPerRow;
+                
+                // Calculate Y position (higher levels go up, so invert)
+                const yPosition = Y_OFFSET + (maxLevel - level) * ROW_HEIGHT * 1.5;
+                
+                // Calculate X position with dynamic spacing based on skills per row
+                const baseX = X_OFFSET + columnIndex * (COL_WIDTH * 3);
+                
+                // Center the skills in their column
+                const totalRowWidth = (skillsPerRow - 1) * COL_WIDTH * 0.9;
+                const startX = baseX - (totalRowWidth / 2);
+                const offsetX = col * (COL_WIDTH * 0.9);
+                
+                const finalPosition = {
+                    x: startX + offsetX,
+                    y: yPosition + row * (ROW_HEIGHT * 0.6) // Increased vertical spacing between rows
+                };
+                
+                // Add deterministic offset based on skill ID to prevent overlaps
+                const skillSeed = skill.id.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
+                finalPosition.x += (skillSeed % 30) - 15; // -15 to +15 offset
+                finalPosition.y += ((skillSeed * 2) % 20) - 10; // -10 to +10 offset
+                
+                positions[skill.id] = finalPosition;
+            });
+        });
+    });
+    
+    return positions;
+};
+
 // Create nodes for all skills
-const createNodes = () => {
+const createNodes = (userSkills: UserSkills) => {
+    const allSkills = getSkillsData(userSkills);
+    
+    // Use dynamic positions for saved skill trees, static for hardcoded data
+    const positions = userSkills.skillTree?.nodes ? 
+        generateDynamicPositions(allSkills) : 
+        positionMap;
+    
     const skillNodes = allSkills
-        .filter(skill => skill.category !== 'Category')
-        .map((skill): SkillNode | null => {
-            const position = positionMap[skill.id];
-            if (!position) return null;
+        .filter((skill: any) => skill.category !== 'Category')
+        .map((skill: any): SkillNode | null => {
+            const position = positions[skill.id];
+            if (!position) {
+                // Fallback position if not found
+                console.warn(`No position found for skill: ${skill.id}`);
+                return {
+                    id: skill.id,
+                    position: { x: Math.random() * 800, y: Math.random() * 600 },
+                    data: { skill },
+                    type: 'custom',
+                    targetPosition: Position.Top,
+                    sourcePosition: Position.Bottom,
+                    zIndex: 10,
+                };
+            }
 
             return {
                 id: skill.id,
@@ -114,103 +269,80 @@ const createNodes = () => {
             };
         });
 
-    const categoryNodes = skillTreeData.categories.map((category): CategoryNode => ({
-        id: category.id,
-        position: positionMap[category.id],
-        data: { label: category.name },
-        targetPosition: Position.Top,
-        sourcePosition: Position.Bottom,
-        style: {
-            width: 150,
-            height: 60,
-            fontSize: '24px',
-            fontWeight: 'bold',
-            background: 'transparent',
-            color: '#ffffff',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            border: category.id === 'software' ? '2px solid #ef4444' : '2px solid #a855f7',
-            borderRadius: '12px',
-            padding: '10px',
-        },
-        zIndex: 5,
-    }));
+    // For saved skill trees, category nodes are included in the skill data
+    // For hardcoded data, we still need to create separate category nodes
+    const categoryNodes = userSkills.skillTree?.nodes ? [] : 
+        skillTreeData.categories.map((category: any): CategoryNode => ({
+            id: category.id,
+            position: positionMap[category.id] || { x: 0, y: 0 },
+            data: { label: category.name || category.id },
+            targetPosition: Position.Top,
+            sourcePosition: Position.Bottom,
+            style: {
+                width: 150,
+                height: 60,
+                fontSize: '24px',
+                fontWeight: 'bold',
+                background: 'transparent',
+                color: '#ffffff',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                border: category.id === 'software' ? '2px solid #ef4444' : 
+                       category.id === 'hardware' ? '2px solid #a855f7' : '2px solid #10b981',
+                borderRadius: '12px',
+                padding: '10px',
+            },
+            zIndex: 5,
+        }));
 
     return [...skillNodes, ...categoryNodes].filter((node): node is TreeNode => node !== null);
 };
 
 // Create edges for all connections
-const createEdges = (): Edge[] => {
+const createEdges = (userSkills: UserSkills): Edge[] => {
     const baseStyle = {
         stroke: '#ffffff',
-        strokeWidth: 0.8,
-        opacity: 0.8,
+        strokeWidth: 1.2,
+        opacity: 0.7,
     };
 
-    // Direct skill prerequisite connections (vertical lines)
-    const skillEdges = allSkills.flatMap((skill) => {
-        if (!skill.prerequisites?.length) return [];
-        
-        return skill.prerequisites.map((prereqId) => ({
-            id: `e-${prereqId}-${skill.id}`,
-            source: prereqId,
-            target: skill.id,
-            type: 'default',
-            style: baseStyle,
-            animated: false,
-            sourceHandle: 'bottom',
-            targetHandle: 'top',
-        }));
-    });
+    // Use saved connections if available, otherwise build from prerequisites
+    let connections: Array<{ from: string; to: string }> = [];
+    
+    if (userSkills.skillTree?.connections) {
+        connections = userSkills.skillTree.connections;
+    } else {
+        // Fallback: build from prerequisites
+        const allSkills = getSkillsData(userSkills);
+        connections = allSkills.flatMap((skill: any) => {
+            if (!skill.prerequisites?.length) return [];
+            return skill.prerequisites.map((prereqId: any) => ({
+                from: prereqId,
+                to: skill.id
+            }));
+        });
+    }
 
-    // Function to create a curly bracket connection with custom offset
-    const createCurlyConnection = (
-        sourceId: string, 
-        targetId: string,
-        offsetMultiplier: number = 0,
-        curvature: number = 0.5 // Control the curve intensity
-    ): Edge => {
-        const xOffset = 100 * offsetMultiplier; // Increased base offset for better spacing
-        
-        return {
-            id: `e-${sourceId}-${targetId}-curve`,
-            source: sourceId,
-            target: targetId,
-            type: 'default',
-            sourceHandle: 'bottom',
-            targetHandle: 'top',
-            style: {
-                ...baseStyle,
-                strokeWidth: 0.8,
-            },
-            data: {
-                pathOptions: {
-                    offset: xOffset,
-                    curvature: curvature,
-                },
-            },
-        };
-    };
+    // Create edges from connections
+    const skillEdges = connections.map(connection => ({
+        id: `e-${connection.from}-${connection.to}`,
+        source: connection.from,
+        target: connection.to,
+        type: 'smoothstep',
+        style: baseStyle,
+        animated: false,
+        sourceHandle: 'bottom',
+        targetHandle: 'top',
+        markerEnd: {
+            type: MarkerType.ArrowClosed,
+            width: 15,
+            height: 15,
+            color: '#ffffff',
+        },
+    }));
 
-    // Special handling for merged paths with curly brackets and custom offsets
-    const mergedEdges: Edge[] = [
-        // GameDev merged connections
-        createCurlyConnection('unity-engine', 'gamedev', 0, 0.4), // Center connection with less curve
-        createCurlyConnection('csharp', 'gamedev', 2.5, 0.7), // Larger offset with more curve
-        
-        // Software category merged connections
-        createCurlyConnection('webdev', 'software', -2.5, 0.7), // Larger offset with more curve
-        createCurlyConnection('gamedev', 'software', 2.5, 0.7), // Larger offset with more curve
-        
-        // PCB Design merged connection
-        createCurlyConnection('kicad', 'pcb-design', 0, 0.4),
-        
-        // Hardware category connection
-        createCurlyConnection('pcb-design', 'hardware', 0, 0.4),
-    ];
-
-    return [...skillEdges, ...mergedEdges];
+    return skillEdges;
 };
 
 interface SkillTreeVisualizationProps {
@@ -220,7 +352,7 @@ interface SkillTreeVisualizationProps {
 
 const SkillTreeVisualization = ({ userSkills, onSkillClick }: SkillTreeVisualizationProps) => {
     // Initialize nodes with status
-    const nodes = createNodes().map(node => {
+    const nodes = createNodes(userSkills).map(node => {
         if (node.type === 'custom') {
             return {
                 ...node,
@@ -233,7 +365,7 @@ const SkillTreeVisualization = ({ userSkills, onSkillClick }: SkillTreeVisualiza
         return node;
     });
 
-    const edges = createEdges();
+    const edges = createEdges(userSkills);
 
     const onNodeClick: NodeMouseHandler = (_event, node) => {
         const typedNode = node as TreeNode;
@@ -243,7 +375,7 @@ const SkillTreeVisualization = ({ userSkills, onSkillClick }: SkillTreeVisualiza
     };
 
     return (
-        <div className="w-full h-[800px] relative">
+        <div className="w-full h-[1200px] relative">
             <div className="absolute inset-0 bg-gradient-to-br from-slate-950/30 via-slate-950/30 to-slate-900/30 rounded-lg" />
             <ReactFlow
                 nodes={nodes}

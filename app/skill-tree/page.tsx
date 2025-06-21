@@ -14,14 +14,46 @@ export default function SkillTreePage() {
   const router = useRouter()
 
   useEffect(() => {
-    // Get skills from sessionStorage
-    const storedSkills = sessionStorage.getItem('userSkills')
-    if (storedSkills) {
-      setUserSkills(JSON.parse(storedSkills))
-    } else {
-      // Redirect to upload if no skills found
+    const loadUserSkills = async () => {
+      // First, try to get skills from sessionStorage (recent upload)
+      const storedSkills = sessionStorage.getItem('userSkills')
+      if (storedSkills) {
+        setUserSkills(JSON.parse(storedSkills))
+        return
+      }
+
+      // If no session data, check if user is logged in and has saved skill tree
+      const userData = localStorage.getItem('user')
+      if (userData) {
+        const user = JSON.parse(userData)
+        
+        try {
+          const response = await fetch('/api/get-user-skilltree', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ userEmail: user.email })
+          })
+
+          if (response.ok) {
+            const data = await response.json()
+            if (data.hasSkillTree) {
+              console.log('✅ Loaded saved skill tree from database')
+              setUserSkills(data)
+              return
+            }
+          }
+        } catch (error) {
+          console.error('❌ Error loading saved skill tree:', error)
+        }
+      }
+
+      // If no saved data found, redirect to upload
       router.push('/upload')
     }
+
+    loadUserSkills()
   }, [router])
 
   const handleSkillClick = (skill: Skill) => {

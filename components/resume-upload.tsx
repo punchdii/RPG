@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Upload, FileText, Sparkles, File, X } from "lucide-react"
 import type { UserSkills } from "@/types/skills"
-import { analyzeResume } from "@/lib/resume-analyzer"
 
 interface ResumeUploadProps {
   onResumeAnalyzed: (skills: UserSkills) => void
@@ -23,15 +22,35 @@ export function ResumeUpload({ onResumeAnalyzed, defaultMode = 'upload' }: Resum
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleAnalyze = async () => {
+    console.log('🎯 Generate Skill Tree button clicked')
     if (!resumeText.trim()) return
 
+    console.log('📄 Resume text length:', resumeText.length)
     setIsAnalyzing(true)
-    // Simulate analysis delay
-    await new Promise((resolve) => setTimeout(resolve, 2000))
 
-    const analyzedSkills = analyzeResume(resumeText)
-    onResumeAnalyzed(analyzedSkills)
-    setIsAnalyzing(false)
+    try {
+      console.log('🔄 Calling analyze-resume API...')
+      const response = await fetch('/api/analyze-resume', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ resumeText })
+      })
+      
+      if (!response.ok) {
+        throw new Error('Failed to analyze resume')
+      }
+      
+      const analyzedSkills = await response.json()
+      console.log('📊 Analysis result:', analyzedSkills)
+      onResumeAnalyzed(analyzedSkills)
+    } catch (error) {
+      console.error('❌ Error analyzing resume:', error)
+      alert('Failed to analyze resume. Please try again.')
+    } finally {
+      setIsAnalyzing(false)
+    }
   }
 
   const handleDemoResume = () => {

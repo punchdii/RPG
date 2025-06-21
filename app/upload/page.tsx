@@ -10,7 +10,70 @@ export default function UploadPage() {
   const router = useRouter()
   const uploadType = searchParams.get('type')
 
-  const handleResumeAnalyzed = (skills: UserSkills) => {
+  // Check if user already has a skill tree and redirect them
+  useEffect(() => {
+    const checkExistingSkillTree = async () => {
+      const userData = localStorage.getItem('user')
+      if (userData) {
+        const user = JSON.parse(userData)
+        
+        try {
+          const response = await fetch('/api/get-user-skilltree', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ userEmail: user.email })
+          })
+
+          if (response.ok) {
+            const data = await response.json()
+            if (data.hasSkillTree) {
+              console.log('✅ User already has skill tree, redirecting...')
+              router.push('/skill-tree')
+              return
+            }
+          }
+        } catch (error) {
+          console.error('❌ Error checking existing skill tree:', error)
+        }
+      }
+    }
+
+    checkExistingSkillTree()
+  }, [router])
+
+  const handleResumeAnalyzed = async (skills: UserSkills) => {
+    try {
+      // Get user data from localStorage
+      const userData = localStorage.getItem('user')
+      if (userData) {
+        const user = JSON.parse(userData)
+        
+        // Save skills to database
+        console.log('💾 Saving skills to database for user:', user.email)
+        const saveResponse = await fetch('/api/save-skills', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userEmail: user.email,
+            skills: skills
+          })
+        })
+
+        if (saveResponse.ok) {
+          const saveResult = await saveResponse.json()
+          console.log('✅ Skills saved successfully:', saveResult)
+        } else {
+          console.error('❌ Failed to save skills to database')
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error saving skills:', error)
+    }
+
     // Store the skills in sessionStorage and redirect to skill tree
     sessionStorage.setItem('userSkills', JSON.stringify(skills))
     router.push('/skill-tree')
