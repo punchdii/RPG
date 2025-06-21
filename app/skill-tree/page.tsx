@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation"
 import { SkillTree } from "@/components/skill-tree"
 import { SkillDetails } from "@/components/skill-details"
 import { UserProfile } from "@/components/user-profile"
+import { Button } from "@/components/ui/button"
+import { FileText } from "lucide-react"
 import type { Skill, UserSkills } from "@/types/skills"
 
 export default function SkillTreePage() {
@@ -66,6 +68,10 @@ export default function SkillTreePage() {
     setSelectedSkill(null)
   }
 
+  const handleAddResume = () => {
+    router.push('/upload?from=skill-tree')
+  }
+
   if (!userSkills) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -82,8 +88,15 @@ export default function SkillTreePage() {
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
           {/* Left sidebar - User Profile */}
-          <div className="lg:col-span-1 sticky top-8">
+          <div className="lg:col-span-1 sticky top-8 space-y-4">
             <UserProfile userSkills={userSkills} />
+            <Button 
+              onClick={handleAddResume}
+              className="w-full bg-orange-600 hover:bg-orange-700 text-white flex items-center justify-center gap-2"
+            >
+              <FileText className="w-4 h-4" />
+              Add Resume
+            </Button>
           </div>
           
           {/* Right side - Skill Tree */}

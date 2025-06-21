@@ -308,10 +308,17 @@ const createNodes = (userSkills: UserSkills) => {
     const uniqueSkills: any[] = [];
     let duplicateSkillCount = 0;
     
+    // Normalize categories when deduplicating
     for (const skill of allSkills) {
         if (!skillIds.has(skill.id)) {
             skillIds.add(skill.id);
-            uniqueSkills.push(skill);
+            // Normalize the category
+            const normalizedSkill = {
+                ...skill,
+                category: skill.category === 'soft-skills' ? 'soft' : 
+                         (skill.category === 'software' || skill.category === 'hardware' ? skill.category : 'software')
+            };
+            uniqueSkills.push(normalizedSkill);
         } else {
             console.log(`🔄 Removing duplicate skill in createNodes: ${skill.id}`);
             duplicateSkillCount++;
@@ -402,7 +409,12 @@ const createEdges = (userSkills: UserSkills): Edge[] => {
         console.log('🔗 Using saved connections:', connections);
         
         // Also add connections from prerequisites that might be missing
-        const allSkills = getSkillsData(userSkills);
+        const allSkills = getSkillsData(userSkills).map(skill => ({
+            ...skill,
+            category: skill.category === 'soft-skills' ? 'soft' : 
+                     (skill.category === 'software' || skill.category === 'hardware' ? skill.category : 'software')
+        }));
+        
         const prerequisiteConnections = allSkills.flatMap((skill: any) => {
             if (!skill.prerequisites?.length) return [];
             return skill.prerequisites.map((prereqId: any) => ({
@@ -423,7 +435,12 @@ const createEdges = (userSkills: UserSkills): Edge[] => {
         });
     } else {
         // Fallback: build from prerequisites
-        const allSkills = getSkillsData(userSkills);
+        const allSkills = getSkillsData(userSkills).map(skill => ({
+            ...skill,
+            category: skill.category === 'soft-skills' ? 'soft' : 
+                     (skill.category === 'software' || skill.category === 'hardware' ? skill.category : 'software')
+        }));
+        
         connections = allSkills.flatMap((skill: any) => {
             if (!skill.prerequisites?.length) return [];
             return skill.prerequisites.map((prereqId: any) => ({
