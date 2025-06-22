@@ -6,7 +6,22 @@ import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { RefreshCw, Database } from 'lucide-react'
+import { 
+  RefreshCw, 
+  Database, 
+  Star, 
+  Crown, 
+  Swords,
+  Shield,
+  Flame,
+  Sparkles,
+  GalleryThumbnails,
+  Gem,
+  Rocket,
+  Zap,
+  Target,
+  Award
+} from 'lucide-react'
 
 interface UserWithSkills {
   id: string
@@ -22,12 +37,14 @@ interface UserWithSkills {
 }
 
 interface UserListSidebarProps {
-  onUserHover: (userSkills: string[] | null) => void
+  onUserHover: (userSkills: string[] | null, userId?: string) => void
+  onUserClick?: (userSkills: string[] | null, userId: string | null) => void
+  selectedUserId?: string | null
   onGlobalTreeRebuilt?: () => Promise<void>
   className?: string
 }
 
-export function UserListSidebar({ onUserHover, onGlobalTreeRebuilt, className = "" }: UserListSidebarProps) {
+export function UserListSidebar({ onUserHover, onUserClick, selectedUserId, onGlobalTreeRebuilt, className = "" }: UserListSidebarProps) {
   const [users, setUsers] = useState<UserWithSkills[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -61,23 +78,38 @@ export function UserListSidebar({ onUserHover, onGlobalTreeRebuilt, className = 
 
   const handleUserMouseEnter = (user: UserWithSkills) => {
     setHoveredUser(user.id)
-    
+    if (selectedUserId) return; // Don't highlight on hover if a user is selected
     // Combine earned skills and earned nodes from skill tree
     const allUserSkills = [
       ...user.earnedSkills,
       ...user.skillTreeNodes.filter(node => node.earned).map(node => node.id)
     ]
-    
     // Remove duplicates
     const uniqueSkills = [...new Set(allUserSkills)]
-    
-    console.log(`🎯 Hovering over user ${user.name}, highlighting skills:`, uniqueSkills)
-    onUserHover(uniqueSkills)
+    onUserHover(uniqueSkills, user.id)
   }
 
   const handleUserMouseLeave = () => {
     setHoveredUser(null)
+    if (selectedUserId) return; // Don't unhighlight on hover out if a user is selected
     onUserHover(null)
+  }
+
+  const handleUserClick = (user: UserWithSkills) => {
+    // Combine earned skills and earned nodes from skill tree
+    const allUserSkills = [
+      ...user.earnedSkills,
+      ...user.skillTreeNodes.filter(node => node.earned).map(node => node.id)
+    ]
+    // Remove duplicates
+    const uniqueSkills = [...new Set(allUserSkills)]
+    if (onUserClick) {
+      if (selectedUserId === user.id) {
+        onUserClick(null, null); // Deselect
+      } else {
+        onUserClick(uniqueSkills, user.id);
+      }
+    }
   }
 
   const getInitials = (name: string) => {
@@ -87,6 +119,87 @@ export function UserListSidebar({ onUserHover, onGlobalTreeRebuilt, className = 
       .join('')
       .toUpperCase()
       .slice(0, 2)
+  }
+
+  // Get level info based on total skills
+  const getLevelInfo = (totalSkills: number) => {
+    // Calculate level (every 5 skills = 1 level)
+    const level = Math.floor(totalSkills / 5) + 1
+
+    // RPG-style progression system
+    if (level >= 25) {
+      return {
+        icon: <Crown className="w-5 h-5" />,
+        gradient: 'from-yellow-400 via-amber-500 to-orange-600',
+        text: 'text-yellow-100'
+      }
+    } else if (level >= 20) {
+      return {
+        icon: <Swords className="w-5 h-5" />,
+        gradient: 'from-red-500 via-rose-500 to-pink-600',
+        text: 'text-red-100'
+      }
+    } else if (level >= 18) {
+      return {
+        icon: <Gem className="w-5 h-5" />,
+        gradient: 'from-violet-500 via-purple-500 to-fuchsia-600',
+        text: 'text-violet-100'
+      }
+    } else if (level >= 16) {
+      return {
+        icon: <Shield className="w-5 h-5" />,
+        gradient: 'from-emerald-400 via-teal-500 to-cyan-600',
+        text: 'text-emerald-100'
+      }
+    } else if (level >= 14) {
+      return {
+        icon: <Flame className="w-5 h-5" />,
+        gradient: 'from-orange-400 via-amber-500 to-yellow-600',
+        text: 'text-orange-100'
+      }
+    } else if (level >= 12) {
+      return {
+        icon: <Target className="w-5 h-5" />,
+        gradient: 'from-blue-400 via-indigo-500 to-violet-600',
+        text: 'text-blue-100'
+      }
+    } else if (level >= 10) {
+      return {
+        icon: <Award className="w-5 h-5" />,
+        gradient: 'from-teal-400 via-emerald-500 to-green-600',
+        text: 'text-teal-100'
+      }
+    } else if (level >= 8) {
+      return {
+        icon: <Rocket className="w-5 h-5" />,
+        gradient: 'from-fuchsia-400 via-pink-500 to-rose-600',
+        text: 'text-fuchsia-100'
+      }
+    } else if (level >= 6) {
+      return {
+        icon: <Sparkles className="w-5 h-5" />,
+        gradient: 'from-cyan-400 via-blue-500 to-indigo-600',
+        text: 'text-cyan-100'
+      }
+    } else if (level >= 4) {
+      return {
+        icon: <Zap className="w-5 h-5" />,
+        gradient: 'from-lime-400 via-green-500 to-emerald-600',
+        text: 'text-lime-100'
+      }
+    } else if (level >= 2) {
+      return {
+        icon: <Star className="w-5 h-5" />,
+        gradient: 'from-amber-400 via-orange-500 to-red-600',
+        text: 'text-amber-100'
+      }
+    } else {
+      return {
+        icon: <GalleryThumbnails className="w-5 h-5" />,
+        gradient: 'from-slate-400 via-slate-500 to-slate-600',
+        text: 'text-slate-100'
+      }
+    }
   }
 
   const handleRebuildGlobalTree = async () => {
@@ -238,68 +351,68 @@ export function UserListSidebar({ onUserHover, onGlobalTreeRebuilt, className = 
         
         <ScrollArea className="h-[calc(100vh-200px)]">
           <div className="space-y-2">
-            {users.map(user => (
-              <Card
-                key={user.id}
-                className={`cursor-pointer transition-all duration-200 border-slate-600 ${
-                  hoveredUser === user.id
-                    ? 'bg-slate-700/80 border-blue-500 shadow-lg shadow-blue-500/20'
-                    : 'bg-slate-800/50 hover:bg-slate-700/60'
-                }`}
-                onMouseEnter={() => handleUserMouseEnter(user)}
-                onMouseLeave={handleUserMouseLeave}
-              >
-                <CardContent className="p-3">
-                  <div className="flex items-center space-x-3">
-                    <Avatar className="w-10 h-10">
-                      <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-sm font-semibold">
-                        {getInitials(user.name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-sm font-medium text-white truncate">
-                          {user.name}
-                        </h3>
-                        <Badge 
-                          variant="secondary" 
-                          className="text-xs bg-blue-500/20 text-blue-300 border-blue-500/30"
-                        >
-                          {user.totalSkills}
-                        </Badge>
-                      </div>
+            {users.map(user => {
+              const levelInfo = getLevelInfo(user.totalSkills)
+              return (
+                <Card
+                  key={user.id}
+                  className={`flex items-center space-x-3 p-3 rounded-lg bg-slate-800/50 hover:bg-slate-700/70 cursor-pointer transition ${selectedUserId === user.id ? 'ring-2 ring-blue-400 bg-blue-900/40' : ''}`}
+                  onMouseEnter={() => handleUserMouseEnter(user)}
+                  onMouseLeave={handleUserMouseLeave}
+                  onClick={() => handleUserClick(user)}
+                >
+                  <CardContent className="p-3">
+                    <div className="flex items-center space-x-3">
+                      <Avatar className="w-10 h-10">
+                        <AvatarFallback className={`bg-gradient-to-br ${levelInfo.gradient} ${levelInfo.text} text-sm font-semibold flex items-center justify-center`}>
+                          {levelInfo.icon}
+                        </AvatarFallback>
+                      </Avatar>
                       
-                      <p className="text-xs text-slate-400 truncate mt-1">
-                        {user.email}
-                      </p>
-                      
-                      {user.earnedSkills.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {user.earnedSkills.slice(0, 3).map(skill => (
-                            <Badge
-                              key={skill}
-                              variant="outline"
-                              className="text-xs px-1.5 py-0.5 bg-green-500/10 text-green-300 border-green-500/30"
-                            >
-                              {skill}
-                            </Badge>
-                          ))}
-                          {user.earnedSkills.length > 3 && (
-                            <Badge
-                              variant="outline"
-                              className="text-xs px-1.5 py-0.5 bg-slate-600/50 text-slate-300 border-slate-500/30"
-                            >
-                              +{user.earnedSkills.length - 3}
-                            </Badge>
-                          )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-sm font-medium text-white truncate">
+                            {user.name}
+                          </h3>
+                          <Badge 
+                            variant="secondary" 
+                            className="text-xs bg-blue-500/20 text-blue-300 border-blue-500/30"
+                          >
+                            {user.totalSkills}
+                          </Badge>
                         </div>
-                      )}
+                        
+                        <p className="text-xs text-slate-400 truncate mt-1">
+                          {user.email}
+                        </p>
+                        
+                        {user.earnedSkills.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {user.earnedSkills.slice(0, 3).map(skill => (
+                              <Badge
+                                key={skill}
+                                variant="outline"
+                                className="text-xs px-1.5 py-0.5 bg-green-500/10 text-green-300 border-green-500/30"
+                              >
+                                {skill}
+                              </Badge>
+                            ))}
+                            {user.earnedSkills.length > 3 && (
+                              <Badge
+                                variant="outline"
+                                className="text-xs px-1.5 py-0.5 bg-slate-600/50 text-slate-300 border-slate-500/30"
+                              >
+                                +{user.earnedSkills.length - 3}
+                              </Badge>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              )
+            })}
           </div>
         </ScrollArea>
       </div>

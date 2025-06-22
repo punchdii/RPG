@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { SkillTree } from "@/components/skill-tree"
 import { SkillDetails } from "@/components/skill-details"
 import { UserListSidebar } from "@/components/user-list-sidebar"
+import { UserProfile } from "@/components/user-profile"
 import type { Skill, UserSkills } from "@/types/skills"
 
 export default function GlobalTreePage() {
@@ -11,6 +12,7 @@ export default function GlobalTreePage() {
   const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null)
   const [showDetails, setShowDetails] = useState(false)
   const [highlightedUserSkills, setHighlightedUserSkills] = useState<string[] | null>(null)
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
 
     const loadGlobalTree = async () => {
       try {
@@ -66,8 +68,82 @@ export default function GlobalTreePage() {
     setSelectedSkill(null)
   }
 
-  const handleUserHover = (userSkills: string[] | null) => {
+  const handleUserHover = (userSkills: string[] | null, userId?: string) => {
+    if (selectedUserId) return;
     setHighlightedUserSkills(userSkills)
+    
+    // Update the global tree nodes to mark them as earned based on the highlighted user's skills
+    if (userSkills) {
+      setUserSkills(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          earnedSkills: userSkills,
+          skillTree: {
+            ...prev.skillTree!,
+            nodes: prev.skillTree?.nodes.map(node => ({
+              ...node,
+              earned: userSkills.includes(node.id)
+            })) || []
+          }
+        };
+      });
+    } else {
+      // Reset all nodes to not earned when no user is highlighted
+      setUserSkills(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          earnedSkills: [],
+          skillTree: {
+            ...prev.skillTree!,
+            nodes: prev.skillTree?.nodes.map(node => ({
+              ...node,
+              earned: false
+            })) || []
+          }
+        };
+      });
+    }
+  }
+
+  const handleUserClick = (userSkills: string[] | null, userId: string | null) => {
+    if (selectedUserId === userId) {
+      // Deselect
+      setSelectedUserId(null);
+      setHighlightedUserSkills(null);
+      setUserSkills(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          earnedSkills: [],
+          skillTree: {
+            ...prev.skillTree!,
+            nodes: prev.skillTree?.nodes.map(node => ({
+              ...node,
+              earned: false
+            })) || []
+          }
+        };
+      });
+    } else {
+      setSelectedUserId(userId);
+      setHighlightedUserSkills(userSkills);
+      setUserSkills(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          earnedSkills: userSkills || [],
+          skillTree: {
+            ...prev.skillTree!,
+            nodes: prev.skillTree?.nodes.map(node => ({
+              ...node,
+              earned: userSkills?.includes(node.id)
+            })) || []
+          }
+        };
+      });
+    }
   }
 
   if (!userSkills) {
@@ -86,6 +162,8 @@ export default function GlobalTreePage() {
       {/* User List Sidebar */}
       <UserListSidebar 
         onUserHover={handleUserHover}
+        onUserClick={handleUserClick}
+        selectedUserId={selectedUserId}
         onGlobalTreeRebuilt={loadGlobalTree}
         className="flex-shrink-0"
       />
@@ -108,10 +186,10 @@ export default function GlobalTreePage() {
                 Highlighting {highlightedUserSkills.length} skills for selected user
               </div>
             )}
-        </div>
-        
-        {/* Skill Tree - Full Width */}
-        <div className="w-full">
+          </div>
+          
+          {/* Skill Tree - Full Width */}
+          <div className="w-full">
             <SkillTree 
               userSkills={userSkills} 
               onSkillClick={handleSkillClick}
@@ -119,14 +197,15 @@ export default function GlobalTreePage() {
             />
         </div>
 
-        {/* Skill Details Modal */}
-        {showDetails && selectedSkill && (
-          <SkillDetails 
-            skill={selectedSkill} 
-            userSkills={userSkills} 
-            onClose={handleCloseDetails} 
-          />
-        )}
+          {/* Skill Details Modal */}
+          {showDetails && selectedSkill && (
+            <SkillDetails 
+              skill={selectedSkill} 
+              userSkills={userSkills} 
+              onClose={handleCloseDetails}
+              isGlobalTree={true}
+            />
+          )}
         </div>
       </div>
     </div>

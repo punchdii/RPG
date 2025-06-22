@@ -35,9 +35,7 @@ interface CustomSkillNodeData {
 
 export function CustomSkillNode({ data }: { data: CustomSkillNodeData }) {
   const { skill, status, isHighlighted, isHovered, isDimmed, onMouseEnter, onMouseLeave } = data;
-
-  console.log(`[CustomSkillNode] Skill: ${skill.name} (${skill.id}), Mastered: ${skill.mastered}, Status: ${status}, UserCount: ${skill.userCount}`);
-
+  
   // Check if this is a category node
   const isCategoryNode = ['software', 'hardware', 'soft-skills'].includes(skill.id);
 

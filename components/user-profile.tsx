@@ -3,9 +3,13 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import type { UserSkills } from "@/types/skills"
-import { User, Star, Zap, Edit } from "lucide-react"
+import { 
+  User, Star, Zap, Edit, Crown, Swords, Shield, 
+  Flame, Sparkles, GalleryThumbnails, Gem, Rocket, Target, Award 
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useState, useEffect } from "react"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
 interface UserData {
   email: string
@@ -27,9 +31,89 @@ export function UserProfile({ userSkills }: UserProfileProps) {
     }
   }, [])
 
-  const totalSkills = userSkills.earnedSkills.length + userSkills.availableSkills.length
+  const totalSkills = userSkills.earnedSkills.length + (userSkills.skillTree?.nodes?.filter(node => node.earned)?.length || 0)
+  // Calculate level based on total skills (every 5 skills = 1 level)
+  const level = Math.floor(totalSkills / 5) + 1
   const skillPoints = userSkills.skillPoints || (userSkills.earnedSkills.length * 10 + userSkills.availableSkills.length * 5)
-  const level = Math.floor(skillPoints / 50) + 1
+
+  // Get level icon based on level
+  const getLevelIcon = () => {
+    if (level >= 25) {
+      return {
+        icon: <Crown className="w-5 h-5" />,
+        gradient: 'from-yellow-400 via-amber-500 to-orange-600',
+        text: 'text-yellow-100'
+      }
+    } else if (level >= 20) {
+      return {
+        icon: <Swords className="w-5 h-5" />,
+        gradient: 'from-red-500 via-rose-500 to-pink-600',
+        text: 'text-red-100'
+      }
+    } else if (level >= 18) {
+      return {
+        icon: <Gem className="w-5 h-5" />,
+        gradient: 'from-violet-500 via-purple-500 to-fuchsia-600',
+        text: 'text-violet-100'
+      }
+    } else if (level >= 16) {
+      return {
+        icon: <Shield className="w-5 h-5" />,
+        gradient: 'from-emerald-400 via-teal-500 to-cyan-600',
+        text: 'text-emerald-100'
+      }
+    } else if (level >= 14) {
+      return {
+        icon: <Flame className="w-5 h-5" />,
+        gradient: 'from-orange-400 via-amber-500 to-yellow-600',
+        text: 'text-orange-100'
+      }
+    } else if (level >= 12) {
+      return {
+        icon: <Target className="w-5 h-5" />,
+        gradient: 'from-blue-400 via-indigo-500 to-violet-600',
+        text: 'text-blue-100'
+      }
+    } else if (level >= 10) {
+      return {
+        icon: <Award className="w-5 h-5" />,
+        gradient: 'from-teal-400 via-emerald-500 to-green-600',
+        text: 'text-teal-100'
+      }
+    } else if (level >= 8) {
+      return {
+        icon: <Rocket className="w-5 h-5" />,
+        gradient: 'from-fuchsia-400 via-pink-500 to-rose-600',
+        text: 'text-fuchsia-100'
+      }
+    } else if (level >= 6) {
+      return {
+        icon: <Sparkles className="w-5 h-5" />,
+        gradient: 'from-cyan-400 via-blue-500 to-indigo-600',
+        text: 'text-cyan-100'
+      }
+    } else if (level >= 4) {
+      return {
+        icon: <Zap className="w-5 h-5" />,
+        gradient: 'from-lime-400 via-green-500 to-emerald-600',
+        text: 'text-lime-100'
+      }
+    } else if (level >= 2) {
+      return {
+        icon: <Star className="w-5 h-5" />,
+        gradient: 'from-amber-400 via-orange-500 to-red-600',
+        text: 'text-amber-100'
+      }
+    } else {
+      return {
+        icon: <GalleryThumbnails className="w-5 h-5" />,
+        gradient: 'from-slate-400 via-slate-500 to-slate-600',
+        text: 'text-slate-100'
+      }
+    }
+  }
+
+  const levelInfo = getLevelIcon()
   
   // Extract name from email if no name is provided
   const displayName = userData?.name || 
@@ -57,9 +141,11 @@ export function UserProfile({ userSkills }: UserProfileProps) {
       <CardContent className="space-y-6">
         {/* Level indicator */}
         <div className="text-center">
-          <div className="w-20 h-20 bg-slate-700/50 border-2 border-slate-600 rounded-xl flex items-center justify-center mx-auto mb-3">
-            <Star className="w-8 h-8 text-slate-400" />
-          </div>
+          <Avatar className="w-20 h-20 mx-auto mb-3">
+            <AvatarFallback className={`bg-gradient-to-br ${levelInfo.gradient} ${levelInfo.text} text-sm font-semibold flex items-center justify-center rounded-full`}>
+              {levelInfo.icon}
+            </AvatarFallback>
+          </Avatar>
           <h3 className="text-slate-300 text-lg mb-1">
             {level <= 2 ? 'Beginner' : level <= 5 ? 'Intermediate' : level <= 10 ? 'Advanced' : 'Expert'} - LVL {level}
           </h3>

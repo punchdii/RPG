@@ -9,10 +9,16 @@ function UploadPageContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const uploadType = searchParams.get('type')
+  const fromSkillTree = searchParams.get('from') === 'skill-tree'
 
   // Check if user already has a skill tree and redirect them
   useEffect(() => {
     const checkExistingSkillTree = async () => {
+      // Skip the check if coming from skill tree page
+      if (fromSkillTree) {
+        return
+      }
+
       const userData = localStorage.getItem('user')
       if (userData) {
         const user = JSON.parse(userData)
@@ -41,7 +47,7 @@ function UploadPageContent() {
     }
 
     checkExistingSkillTree()
-  }, [router])
+  }, [router, fromSkillTree])
 
   const handleResumeAnalyzed = async (skills: UserSkills) => {
     try {

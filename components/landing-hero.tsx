@@ -39,9 +39,9 @@ export function LandingHero() {
 
             {/* Main heading */}
             <div className="space-y-5">
-              <h1 
-                className="max-w-3xl text-5xl lg:text-6xl font-bold text-white"
-                style={{ lineHeight: "1.3" }}
+            <h1 
+            className="max-w-3xl text-5xl lg:text-6xl font-bold text-white"
+            style={{ lineHeight: "1.3" }}
               >
                 Transform Your Resume Into an
                 <span className="bg-gradient-to-r from-orange-400 via-orange-500 to-orange-600 text-transparent bg-clip-text"> Interactive Skill Tree</span>
@@ -50,7 +50,7 @@ export function LandingHero() {
                 Upload your resume or paste your text to generate a beautiful, interactive skill tree visualization. Track your progress and plan your career growth.
               </p>
             </div>
-            
+
             {/* Action buttons */}
             <div className="flex flex-col sm:flex-row gap-4 relative z-50">
               {/* Upload Resume */}
@@ -76,13 +76,13 @@ export function LandingHero() {
             </div>
           </div>
 
-          {/* Right side - Skill tree visualization */}
+            {/* Right side - Skill tree visualization */}
           <div className="relative mx-auto w-[420px] h-[420px] sm:w-[500px] sm:h-[500px] lg:w-[600px] lg:h-[600px] mt-12 lg:mt-0">
-            <img 
-              src="/SkillTree.png?v=2" 
-              alt="Professional Skill Tree Visualization" 
-              className="w-full h-full object-contain"
-            />
+              <img 
+                src="/SkillTree.png?v=2" 
+                alt="Professional Skill Tree Visualization" 
+                className="w-full h-full object-contain"
+              />
           </div>
         </div>
       </div>
