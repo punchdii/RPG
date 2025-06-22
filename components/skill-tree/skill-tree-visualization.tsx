@@ -96,9 +96,9 @@ const getSkillStatus = (skillId: string, userSkills: UserSkills) => {
 }
 
 // Grid layout constants for better spacing
-const COL_WIDTH = 275;
+const COL_WIDTH = 300;
 const ROW_HEIGHT =250;
-const X_OFFSET = 100;
+const X_OFFSET = 140;
 const Y_OFFSET = 150;
 
 // Function to add controlled randomness to positions
@@ -436,7 +436,7 @@ const generateDynamicPositions = (skills: any[]) => {
     // Constants for layout
     const NODE_WIDTH = 240;  // Width of each skill node
     const NODE_SPACING = 50; // Spacing between nodes within same category
-    const TREE_SPACING = 300; // INCREASED spacing between different category trees to prevent overlap
+    const TREE_SPACING = 400; // INCREASED spacing between different category trees to prevent overlap
     const VIEWPORT_PADDING = 100; // Padding from viewport edges
     
     // Calculate max width needed for each category by finding the widest level
@@ -560,83 +560,41 @@ const generateDynamicPositions = (skills: any[]) => {
         `Level ${level}: ${finalSkillsByLevel[parseInt(level)].length} nodes`
     ));
     
-    // Position nodes level by level, centering each category's nodes under their main category
-    for (let level = 0; level <= maxLevel; level++) {
-        const skillsAtLevel = finalSkillsByLevel[level] || [];
-        
-        if (skillsAtLevel.length === 0) continue;
-        
-        // Group by category at this level
-        const categorizedSkills: { [cat: string]: any[] } = {
-            'Software': [],
-            'Hardware': [],
-            'soft': []
-        };
-        
-        skillsAtLevel.forEach(skill => {
-            // Debug: Log each skill's category during positioning
-            console.log(`🎯 Positioning skill "${skill.id}" with category "${skill.category}"`);
-            
-            // SKIP CATEGORY NODES during positioning - they have their own positioning logic
-            if (skill.category === 'Category') {
-                console.log(`  ⏭️ Skipping category node during positioning: "${skill.id}"`);
-                return;
-            }
-            
-            const category = skill.category === 'Software' ? 'Software' : 
-                            skill.category === 'Hardware' ? 'Hardware' :
-                            skill.category === 'soft' ? 'soft' : 'Software';
-            
-            console.log(`  ➜ Assigned to positioning category: "${category}"`);
-            categorizedSkills[category].push(skill);
-        });
-        
-        // Debug: Show categorized skills at this level
-        console.log(`📋 Level ${level} categorized skills:`, Object.keys(categorizedSkills).map(cat => 
-            `${cat}: [${categorizedSkills[cat].map(s => s.id).join(', ')}]`
-        ));
-        
-        // Position each category's skills centered under their parent
-        // PROCESS IN ORDER: Software → Hardware → Soft Skills
-        const categoryOrder = ['Software', 'Hardware', 'soft'];
-        
-        categoryOrder.forEach(category => {
-            const categorySkills = categorizedSkills[category];
-            if (categorySkills.length === 0) return;
-            
-            const parentCenter = MAIN_CATEGORY_POSITIONS[category as keyof typeof MAIN_CATEGORY_POSITIONS];
-            
-            console.log(`🎯 Processing ${category} skills at level ${level}:`, categorySkills.map(s => s.id));
-            console.log(`📍 Parent center for ${category}:`, parentCenter);
-            
-            // Calculate the total width needed for this category's skills at this level
-            const totalWidth = (categorySkills.length * NODE_WIDTH) + ((categorySkills.length - 1) * NODE_SPACING);
-            
-            // Calculate starting X position to center all nodes under the parent
-            const startX = parentCenter.x - (totalWidth / 2);
-            
-            // Calculate Y position for this level (higher levels are positioned above lower levels)
-            const LEVEL_HEIGHT = 200; // Vertical spacing between levels
-            const yPosition = parentCenter.y - ((maxLevel - level + 1) * LEVEL_HEIGHT);
-            
-            console.log(`📏 ${category} level ${level}: totalWidth=${totalWidth}, startX=${startX}, yPosition=${yPosition}`);
-            
-            // Position each skill in this category
-            categorySkills.forEach((skill, index) => {
-                const skillX = startX + (index * (NODE_WIDTH + NODE_SPACING)) + (NODE_WIDTH / 2);
-                
-                // Add slight randomization for organic look (reduced for better centering)
-                const skillSeed = skill.id.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
-                const randomOffsetX = (Math.sin(skillSeed * 1.337) * 15) - 7.5; // ±7.5px horizontal
-                const randomOffsetY = (Math.cos(skillSeed * 2.718) * 10) - 5;   // ±5px vertical
-                
-                positions[skill.id] = {
-                    x: skillX - (NODE_WIDTH / 2) + randomOffsetX, // Center the node
-                    y: yPosition + randomOffsetY
-                };
-                
-                console.log(`✅ Positioned ${skill.id} (${category}) at level ${level}: x=${Math.round(skillX)}, y=${yPosition}`);
-            });
+    // Explicitly set base X positions for each main category
+    const CATEGORY_BASE_X = {
+      'Software': X_OFFSET,
+      'Hardware': X_OFFSET + 1200,
+      'soft': X_OFFSET + 2300,
+    };
+    const CATEGORY_BASE_Y = Y_OFFSET;
+    const CATEGORY_NODE_HEIGHT = 80; // Approximate height of category node
+    const CATEGORY_MARGIN = 40; // Space between category node and first row
+    const NODES_PER_ROW = 4;
+    const NODE_H_SPACING = 220;
+    const NODE_V_SPACING = 180;
+
+    // First, position the category nodes themselves
+    positions['software'] = { x: CATEGORY_BASE_X['Software'], y: CATEGORY_BASE_Y };
+    positions['hardware'] = { x: CATEGORY_BASE_X['Hardware'], y: CATEGORY_BASE_Y };
+    positions['soft-skills'] = { x: CATEGORY_BASE_X['soft'], y: CATEGORY_BASE_Y };
+
+    // Now, position the child nodes for each category
+    for (const category of Object.keys(skillsByCategory)) {
+        const categorySkills = skillsByCategory[category];
+        if (categorySkills.length === 0) continue;
+
+        // Use fixed base X for each category
+        const baseX = CATEGORY_BASE_X[category as 'Software' | 'Hardware' | 'soft'] || X_OFFSET;
+        const baseY = CATEGORY_BASE_Y + CATEGORY_NODE_HEIGHT + CATEGORY_MARGIN;
+
+        categorySkills.forEach((skill, idx) => {
+            // Skip the category node itself (already positioned)
+            if (skill.id === 'software' || skill.id === 'hardware' || skill.id === 'soft-skills') return;
+            const row = Math.floor(idx / NODES_PER_ROW);
+            const col = idx % NODES_PER_ROW;
+            const x = baseX + col * NODE_H_SPACING;
+            const y = baseY + row * NODE_V_SPACING;
+            positions[skill.id] = { x, y };
         });
     }
     
