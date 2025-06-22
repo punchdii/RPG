@@ -33,7 +33,8 @@ const convertSavedSkillTree = (userSkills: UserSkills) => {
     description: node.description || '',
     category: node.category,
     prerequisites: node.prerequisites || [],
-    earned: node.earned
+    earned: node.earned,
+    mastered: node.mastered === true // Only true if explicitly set to true
   }));
 };
 
@@ -62,6 +63,7 @@ const getSkillsData = (userSkills: UserSkills) => {
   const hardcodedSkills = [
     ...skillTreeData.software,
     ...skillTreeData.hardware,
+    ...skillTreeData.softSkills,
     ...skillTreeData.categories
   ];
   
@@ -94,9 +96,9 @@ const getSkillStatus = (skillId: string, userSkills: UserSkills) => {
 }
 
 // Grid layout constants for better spacing
-const COL_WIDTH = 275;
+const COL_WIDTH = 300;
 const ROW_HEIGHT =250;
-const X_OFFSET = 100;
+const X_OFFSET = 140;
 const Y_OFFSET = 150;
 
 // Function to add controlled randomness to positions
@@ -175,126 +177,426 @@ interface CategoryNode extends Node<CategoryNodeData> {
 
 type TreeNode = SkillNode | CategoryNode;
 
-// Dynamic positioning for saved skill trees - hierarchical layout
+// Dynamic positioning for saved skill trees - hierarchical layout with parent-centered positioning
 const generateDynamicPositions = (skills: any[]) => {
     const positions: { [key: string]: { x: number, y: number } } = {};
+    
+    // Build dependency graph to determine levels
     const skillMap = new Map(skills.map(skill => [skill.id, skill]));
+    const levels: { [key: string]: number } = {};
+    const visited = new Set<string>();
     
-    // Define main category positions (these are the anchor points)
-    const categoryPositions = {
-        'software': { x: X_OFFSET + 300, y: Y_OFFSET + 800 },
-        'hardware': { x: X_OFFSET + 800, y: Y_OFFSET + 800 },
-        'soft-skills': { x: X_OFFSET + 1300, y: Y_OFFSET + 800 }
-    };
-    
-    // First, position the main category nodes
-    positions['software'] = categoryPositions['software'];
-    positions['hardware'] = categoryPositions['hardware'];
-    positions['soft-skills'] = categoryPositions['soft-skills'];
-    
-    console.log('🏗️ Positioned main categories:', categoryPositions);
-    
-    // Function to determine which main category a skill belongs to
-    const getMainCategory = (skill: any): string => {
-        if (skill.id === 'software' || skill.id === 'hardware' || skill.id === 'soft-skills') {
-            return skill.id;
+    // Calculate the initial level of each skill (how many prerequisites deep)
+    const calculateLevel = (skillId: string): number => {
+        if (visited.has(skillId)) return levels[skillId] || 0;
+        visited.add(skillId);
+        
+        const skill = skillMap.get(skillId);
+        if (!skill || !skill.prerequisites || skill.prerequisites.length === 0) {
+            levels[skillId] = 0; // Base level
+            return 0;
         }
         
-        // For other skills, determine by category or prerequisites
-        if (skill.category === 'software' || skill.category === 'Software') return 'software';
-        if (skill.category === 'hardware' || skill.category === 'Hardware') return 'hardware';
-        if (skill.category === 'soft' || skill.category === 'Soft' || skill.category === 'soft-skills') return 'soft-skills';
-        
-        // If category is unclear, trace prerequisites to find main category
-        const traceToMainCategory = (skillId: string, visited = new Set<string>()): string => {
-            if (visited.has(skillId)) return 'software'; // Default fallback
-            visited.add(skillId);
-            
-            const currentSkill = skillMap.get(skillId);
-            if (!currentSkill) return 'software';
-            
-            if (['software', 'hardware', 'soft-skills'].includes(currentSkill.id)) {
-                return currentSkill.id;
-            }
-            
-            if (currentSkill.prerequisites && currentSkill.prerequisites.length > 0) {
-                for (const prereqId of currentSkill.prerequisites) {
-                    const result = traceToMainCategory(prereqId, new Set(visited));
-                    if (result) return result;
-                }
-            }
-            
-            return 'software'; // Default fallback
-        };
-        
-        return traceToMainCategory(skill.id);
+        // Find the maximum level among prerequisites and add 1
+        const maxPrereqLevel = Math.max(
+            ...skill.prerequisites.map((prereqId: string) => calculateLevel(prereqId))
+        );
+        levels[skillId] = maxPrereqLevel + 1;
+        return levels[skillId];
     };
     
-    // Group skills by their main category
+    // Calculate initial levels for all skills
+    skills.forEach(skill => calculateLevel(skill.id));
+    
+    // LEVEL BALANCING ALGORITHM
+    // Define maximum nodes per level for each category to create a more tree-like structure
+    const MAX_NODES_PER_LEVEL = {
+        'Software': 6,    // Increased from typical 3-4 to allow more nodes per level
+        'Hardware': 4,    // Hardware typically has fewer nodes
+        'soft': 4,        // Soft skills
+        'Category': 2     // Category nodes are fewer
+    };
+    
+    // ROBUST CATEGORIZATION WITH ERROR HANDLING
+    // Group skills by category first with explicit validation
     const skillsByCategory: { [category: string]: any[] } = {
-        'software': [],
-        'hardware': [],
-        'soft-skills': []
+        'Software': [],
+        'Hardware': [],
+        'soft': [],
+        'Category': []
     };
     
-    skills.forEach(skill => {
-        if (!['software', 'hardware', 'soft-skills'].includes(skill.id)) {
-            const mainCategory = getMainCategory(skill);
-            skillsByCategory[mainCategory].push(skill);
+    console.log('🚀 Starting skill categorization with robust error handling...');
+    
+    skills.forEach((skill, index) => {
+        console.log(`\n🔍 [${index}] Processing skill:`, {
+            id: skill.id,
+            name: skill.name,
+            category: skill.category,
+            type: typeof skill.category
+        });
+        
+        // EXPLICIT CATEGORY VALIDATION AND ASSIGNMENT
+        let assignedCategory = 'UNKNOWN';
+        
+        // Handle Category nodes (main category nodes like 'software', 'hardware', 'soft-skills')
+        if (skill.category === 'Category') {
+            assignedCategory = 'Category';
+            console.log(`  ✅ CATEGORY NODE: "${skill.id}" → Category array`);
+            skillsByCategory['Category'].push(skill);
+            return;
+        }
+        
+        // Handle Software skills - EXPLICIT string matching
+        if (skill.category === 'Software' || skill.category === 'software') {
+            assignedCategory = 'Software';
+            console.log(`  ✅ SOFTWARE SKILL: "${skill.id}" → Software array`);
+            skillsByCategory['Software'].push(skill);
+            return;
+        }
+        
+        // Handle Hardware skills - EXPLICIT string matching
+        if (skill.category === 'Hardware' || skill.category === 'hardware') {
+            assignedCategory = 'Hardware';
+            console.log(`  ✅ HARDWARE SKILL: "${skill.id}" → Hardware array`);
+            skillsByCategory['Hardware'].push(skill);
+            return;
+        }
+        
+        // Handle Soft skills - EXPLICIT string matching
+        if (skill.category === 'soft' || skill.category === 'Soft' || skill.category === 'soft-skills') {
+            assignedCategory = 'soft';
+            console.log(`  ✅ SOFT SKILL: "${skill.id}" → Soft Skills array`);
+            skillsByCategory['soft'].push(skill);
+            return;
+        }
+        
+        // ERROR HANDLING: Unknown category
+        console.error(`  ❌ UNKNOWN CATEGORY: "${skill.category}" for skill "${skill.id}"`);
+        console.error(`  🔧 Defaulting to Software category`);
+        assignedCategory = 'Software';
+        skillsByCategory['Software'].push(skill);
+    });
+    
+    // VALIDATION: Check categorization results
+    console.log('\n📊 CATEGORIZATION RESULTS:');
+    Object.keys(skillsByCategory).forEach(cat => {
+        const skills = skillsByCategory[cat];
+        console.log(`  ${cat}: ${skills.length} skills`);
+        if (skills.length > 0) {
+            console.log(`    └─ [${skills.map(s => s.id).join(', ')}]`);
         }
     });
     
-    console.log('📊 Skills grouped by category:', Object.keys(skillsByCategory).map(cat => ({
-        category: cat,
-        count: skillsByCategory[cat].length
-    })));
+    // ERROR CHECKING: Ensure we have the expected categories
+    const expectedCounts = {
+        'Software': 16, // Expected software skills
+        'Hardware': 9,  // Expected hardware skills  
+        'soft': 8,      // Expected soft skills
+        'Category': 3   // Expected category nodes
+    };
     
-    // Position skills in each category with curved layout
+    console.log('\n🔍 VALIDATION CHECKS:');
+    Object.keys(expectedCounts).forEach(cat => {
+        const actual = skillsByCategory[cat].length;
+        const expected = expectedCounts[cat as keyof typeof expectedCounts];
+        if (actual === expected) {
+            console.log(`  ✅ ${cat}: ${actual}/${expected} skills (CORRECT)`);
+        } else {
+            console.warn(`  ⚠️ ${cat}: ${actual}/${expected} skills (MISMATCH)`);
+        }
+    });
+    
+    // FORCE CORRECT CATEGORIZATION if something went wrong
+    if (skillsByCategory['Software'].length === 0 || skillsByCategory['Hardware'].length === 0) {
+        console.error('🚨 CATEGORIZATION FAILED! Attempting manual fix...');
+        
+        // Clear arrays
+        skillsByCategory['Software'] = [];
+        skillsByCategory['Hardware'] = [];
+        skillsByCategory['soft'] = [];
+        skillsByCategory['Category'] = [];
+        
+        // Manual categorization based on skill IDs
+        skills.forEach(skill => {
+            const softwareIds = ['typescript', 'javascript', 'html-css', 'reactjs', 'nextjs', 'nodejs', 'webdev', 'fullstack-dev', '3d-animation', 'unity-engine', 'gamedev', 'csharp-oop', 'csharp', 'python', 'data-analysis', 'machine-learning'];
+            const hardwareIds = ['electronics-basics', 'follow-schematic', 'kicad', 'altium', 'pcb-design', 'soldering', 'pcb-assembly', 'embedded-programming', 'iot-development'];
+            const softSkillIds = ['communication', 'teamwork', 'leadership', 'problem-solving', 'project-management', 'time-management', 'adaptability', 'mentoring'];
+            const categoryIds = ['software', 'hardware', 'soft-skills'];
+            
+            if (categoryIds.includes(skill.id)) {
+                skillsByCategory['Category'].push(skill);
+                console.log(`  🔧 MANUAL FIX: "${skill.id}" → Category`);
+            } else if (softwareIds.includes(skill.id)) {
+                skillsByCategory['Software'].push(skill);
+                console.log(`  🔧 MANUAL FIX: "${skill.id}" → Software`);
+            } else if (hardwareIds.includes(skill.id)) {
+                skillsByCategory['Hardware'].push(skill);
+                console.log(`  🔧 MANUAL FIX: "${skill.id}" → Hardware`);
+            } else if (softSkillIds.includes(skill.id)) {
+                skillsByCategory['soft'].push(skill);
+                console.log(`  🔧 MANUAL FIX: "${skill.id}" → Soft Skills`);
+            } else {
+                console.error(`  ❌ UNKNOWN SKILL ID: "${skill.id}"`);
+            }
+        });
+        
+        console.log('\n📊 MANUAL FIX RESULTS:');
+        Object.keys(skillsByCategory).forEach(cat => {
+            const skills = skillsByCategory[cat];
+            console.log(`  ${cat}: ${skills.length} skills`);
+            if (skills.length > 0) {
+                console.log(`    └─ [${skills.map(s => s.id).join(', ')}]`);
+            }
+        });
+    }
+    
+    // LEVEL BALANCING ALGORITHM (after successful categorization)
+    console.log('\n⚖️ Starting level balancing...');
+    
     Object.keys(skillsByCategory).forEach(category => {
+        if (category === 'Category') {
+            console.log(`  ⏭️ Skipping level balancing for Category nodes`);
+            return; // Skip category nodes for rebalancing
+        }
+        
         const categorySkills = skillsByCategory[category];
-        const mainCategoryPos = categoryPositions[category as keyof typeof categoryPositions];
+        if (categorySkills.length === 0) {
+            console.log(`  ⏭️ Skipping empty category: ${category}`);
+            return;
+        }
         
-        if (categorySkills.length === 0) return;
+        const maxNodesPerLevel = MAX_NODES_PER_LEVEL[category as keyof typeof MAX_NODES_PER_LEVEL] || 4;
+        console.log(`  🎯 Balancing ${category} (max ${maxNodesPerLevel} per level, ${categorySkills.length} total skills)`);
         
-        console.log(`🎯 Positioning ${categorySkills.length} skills for ${category}`);
+        // Group by current levels
+        const skillsByLevel: { [level: number]: any[] } = {};
+        categorySkills.forEach(skill => {
+            const level = levels[skill.id];
+            if (!skillsByLevel[level]) skillsByLevel[level] = [];
+            skillsByLevel[level].push(skill);
+        });
         
-        // Calculate spread width for this category
-        const totalWidth = Math.max(600, categorySkills.length * 120); // Minimum 600px spread
-        const startX = mainCategoryPos.x - totalWidth / 2;
+        // Redistribute nodes that exceed the maximum per level
+        const levelKeys = Object.keys(skillsByLevel).map(Number).sort((a, b) => a - b);
         
-        // Sort skills by some criteria (name for consistency)
-        categorySkills.sort((a, b) => a.name.localeCompare(b.name));
-        
-        categorySkills.forEach((skill, index) => {
-            // Calculate horizontal position
-            const xProgress = categorySkills.length > 1 ? index / (categorySkills.length - 1) : 0.5;
-            const skillX = startX + (xProgress * totalWidth);
+        levelKeys.forEach(currentLevel => {
+            const nodesAtLevel = skillsByLevel[currentLevel];
             
-            // Calculate horizontal distance from main category center
-            const horizontalDistance = Math.abs(skillX - mainCategoryPos.x);
-            
-            // Create curved effect: the further horizontally, the higher vertically (lower Y value)
-            // Use a quadratic curve for smooth effect
-            const maxCurveHeight = 400; // Maximum vertical displacement
-            const normalizedDistance = Math.min(horizontalDistance / (totalWidth / 2), 1);
-            const curveOffset = Math.pow(normalizedDistance, 1.5) * maxCurveHeight;
-            
-            // Position the skill
-            const skillY = mainCategoryPos.y - curveOffset - 100; // Base offset from category
-            
-            // Add some randomization to avoid perfectly straight lines
-            const skillSeed = skill.id.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
-            const randomOffsetX = (Math.sin(skillSeed * 1.337) * 30) - 15; // ±15px horizontal
-            const randomOffsetY = (Math.cos(skillSeed * 2.718) * 20) - 10; // ±10px vertical
-            
-            positions[skill.id] = {
-                x: skillX + randomOffsetX,
-                y: skillY + randomOffsetY
-            };
-            
-            console.log(`📍 ${skill.id}: x=${Math.round(skillX)}, y=${Math.round(skillY)}, distance=${Math.round(horizontalDistance)}, curve=${Math.round(curveOffset)}`);
+            if (nodesAtLevel.length > maxNodesPerLevel) {
+                console.log(`    ⚖️ Rebalancing ${category} level ${currentLevel}: ${nodesAtLevel.length} nodes > ${maxNodesPerLevel} max`);
+                
+                // Keep the first maxNodesPerLevel nodes at current level
+                const nodesToKeep = nodesAtLevel.slice(0, maxNodesPerLevel);
+                const nodesToMove = nodesAtLevel.slice(maxNodesPerLevel);
+                
+                // Move excess nodes to the next level
+                const nextLevel = currentLevel + 1;
+                if (!skillsByLevel[nextLevel]) skillsByLevel[nextLevel] = [];
+                
+                nodesToMove.forEach(skill => {
+                    // Update the skill's level
+                    levels[skill.id] = nextLevel;
+                    skillsByLevel[nextLevel].push(skill);
+                    console.log(`      📍 Moved ${skill.id} from level ${currentLevel} to ${nextLevel}`);
+                });
+                
+                // Update the current level array
+                skillsByLevel[currentLevel] = nodesToKeep;
+            } else {
+                console.log(`    ✅ ${category} level ${currentLevel}: ${nodesAtLevel.length} nodes (within limit)`);
+            }
         });
     });
+    
+    // FINAL VALIDATION after level balancing
+    console.log('\n✅ FINAL CATEGORIZATION VALIDATION:');
+    Object.keys(skillsByCategory).forEach(cat => {
+        const skills = skillsByCategory[cat];
+        console.log(`  ${cat}: ${skills.length} skills`);
+        if (skills.length > 0) {
+            console.log(`    └─ [${skills.map(s => s.id).join(', ')}]`);
+        }
+    });
+    
+    // ERROR CHECK: Ensure no category is empty (except possibly Category)
+    if (skillsByCategory['Software'].length === 0) {
+        console.error('🚨 CRITICAL ERROR: Software category is empty!');
+    }
+    if (skillsByCategory['Hardware'].length === 0) {
+        console.error('🚨 CRITICAL ERROR: Hardware category is empty!');
+    }
+    if (skillsByCategory['soft'].length === 0) {
+        console.error('🚨 CRITICAL ERROR: Soft skills category is empty!');
+    }
+    
+    // PARENT-CENTERED POSITIONING ALGORITHM WITH DYNAMIC WIDTH CALCULATION
+    // ORDER: Software → Hardware → Soft Skills (left to right)
+    
+    // Constants for layout
+    const NODE_WIDTH = 240;  // Width of each skill node
+    const NODE_SPACING = 50; // Spacing between nodes within same category
+    const TREE_SPACING = 400; // INCREASED spacing between different category trees to prevent overlap
+    const VIEWPORT_PADDING = 100; // Padding from viewport edges
+    
+    // Calculate max width needed for each category by finding the widest level
+    const calculateTreeWidth = (categorySkills: any[]) => {
+        if (categorySkills.length === 0) return NODE_WIDTH; // Minimum width
+        
+    const skillsByLevel: { [level: number]: any[] } = {};
+        
+        // Group category skills by level
+        categorySkills.forEach(skill => {
+            const level = levels[skill.id];
+            if (!skillsByLevel[level]) skillsByLevel[level] = [];
+            skillsByLevel[level].push(skill);
+        });
+        
+        // Find the level with the most nodes (widest level)
+        let maxWidth = 0;
+        Object.values(skillsByLevel).forEach(levelSkills => {
+            const levelWidth = (levelSkills.length * NODE_WIDTH) + ((levelSkills.length - 1) * NODE_SPACING);
+            maxWidth = Math.max(maxWidth, levelWidth);
+        });
+        
+        return Math.max(maxWidth, NODE_WIDTH); // Minimum width of one node
+    };
+    
+    // Calculate widths for each category tree IN ORDER
+    const softwareWidth = calculateTreeWidth(skillsByCategory['Software']);
+    const hardwareWidth = calculateTreeWidth(skillsByCategory['Hardware']);
+    const softSkillsWidth = calculateTreeWidth(skillsByCategory['soft']);
+    
+    const treeWidths = {
+        'Software': softwareWidth,
+        'Hardware': hardwareWidth,
+        'soft': softSkillsWidth
+    };
+    
+    console.log('🌳 Tree widths calculated IN ORDER:', treeWidths);
+    console.log('🔍 Software skills count:', skillsByCategory['Software'].length);
+    console.log('🔍 Hardware skills count:', skillsByCategory['Hardware'].length);
+    console.log('🔍 Soft skills count:', skillsByCategory['soft'].length);
+    
+    // Calculate positions step by step to avoid overlap
+    // Start from left edge with padding
+    let currentX = VIEWPORT_PADDING;
+    
+    // SOFTWARE TREE (First - leftmost)
+    const softwareCenterX = currentX + (softwareWidth / 2);
+    currentX += softwareWidth + TREE_SPACING; // Move to next tree position
+    
+    // HARDWARE TREE (Second - middle)
+    const hardwareCenterX = currentX + (hardwareWidth / 2);
+    currentX += hardwareWidth + TREE_SPACING; // Move to next tree position
+    
+    // SOFT SKILLS TREE (Third - rightmost)
+    const softSkillsCenterX = currentX + (softSkillsWidth / 2);
+    currentX += softSkillsWidth + VIEWPORT_PADDING; // Final position
+    
+    // Total viewport width needed
+    const totalViewportWidth = currentX;
+    
+    // Calculate dynamic positions for main category nodes IN ORDER
+    const MAIN_CATEGORY_POSITIONS = {
+        'Software': { 
+            x: softwareCenterX, 
+            y: 800 
+        },
+        'Hardware': { 
+            x: hardwareCenterX, 
+            y: 800 
+        },
+        'soft': { 
+            x: softSkillsCenterX, 
+            y: 800 
+        }
+    };
+    
+    console.log('📍 ORDERED main category positions:');
+    console.log('  Software (1st):', MAIN_CATEGORY_POSITIONS['Software']);
+    console.log('  Hardware (2nd):', MAIN_CATEGORY_POSITIONS['Hardware']);
+    console.log('  Soft Skills (3rd):', MAIN_CATEGORY_POSITIONS['soft']);
+    console.log('🌐 Total viewport width needed:', totalViewportWidth);
+    
+    // Verify no overlap
+    const softwareRange = [VIEWPORT_PADDING, VIEWPORT_PADDING + softwareWidth];
+    const hardwareRange = [VIEWPORT_PADDING + softwareWidth + TREE_SPACING, VIEWPORT_PADDING + softwareWidth + TREE_SPACING + hardwareWidth];
+    const softSkillsRange = [VIEWPORT_PADDING + softwareWidth + TREE_SPACING + hardwareWidth + TREE_SPACING, totalViewportWidth - VIEWPORT_PADDING];
+    
+    console.log('📏 Tree ranges (to verify no overlap):');
+    console.log('  Software range:', softwareRange);
+    console.log('  Hardware range:', hardwareRange);
+    console.log('  Soft Skills range:', softSkillsRange);
+    
+    // Position category nodes first (if they exist)
+    const categoryNodes = skillsByCategory['Category'] || [];
+    categoryNodes.forEach(categoryNode => {
+        if (categoryNode.id === 'software') {
+            positions[categoryNode.id] = MAIN_CATEGORY_POSITIONS['Software'];
+            console.log('✅ Positioned SOFTWARE category node at:', MAIN_CATEGORY_POSITIONS['Software']);
+        } else if (categoryNode.id === 'hardware') {
+            positions[categoryNode.id] = MAIN_CATEGORY_POSITIONS['Hardware'];
+            console.log('✅ Positioned HARDWARE category node at:', MAIN_CATEGORY_POSITIONS['Hardware']);
+        } else if (categoryNode.id === 'soft-skills') {
+            positions[categoryNode.id] = MAIN_CATEGORY_POSITIONS['soft'];
+            console.log('✅ Positioned SOFT SKILLS category node at:', MAIN_CATEGORY_POSITIONS['soft']);
+        }
+    });
+    
+    // Group all skills by their final levels for positioning
+    const finalSkillsByLevel: { [level: number]: any[] } = {};
+    const maxLevel = Math.max(...Object.values(levels));
+    
+    skills.forEach(skill => {
+        if (skill.category !== 'Category') { // Skip category nodes
+        const level = levels[skill.id];
+            if (!finalSkillsByLevel[level]) finalSkillsByLevel[level] = [];
+            finalSkillsByLevel[level].push(skill);
+        }
+    });
+    
+    console.log('🎯 Final level distribution:', Object.keys(finalSkillsByLevel).map(level => 
+        `Level ${level}: ${finalSkillsByLevel[parseInt(level)].length} nodes`
+    ));
+    
+    // Explicitly set base X positions for each main category
+    const CATEGORY_BASE_X = {
+      'Software': X_OFFSET,
+      'Hardware': X_OFFSET + 1200,
+      'soft': X_OFFSET + 2300,
+    };
+    const CATEGORY_BASE_Y = Y_OFFSET;
+    const CATEGORY_NODE_HEIGHT = 80; // Approximate height of category node
+    const CATEGORY_MARGIN = 40; // Space between category node and first row
+    const NODES_PER_ROW = 4;
+    const NODE_H_SPACING = 220;
+    const NODE_V_SPACING = 180;
+
+    // First, position the category nodes themselves
+    positions['software'] = { x: CATEGORY_BASE_X['Software'], y: CATEGORY_BASE_Y };
+    positions['hardware'] = { x: CATEGORY_BASE_X['Hardware'], y: CATEGORY_BASE_Y };
+    positions['soft-skills'] = { x: CATEGORY_BASE_X['soft'], y: CATEGORY_BASE_Y };
+
+    // Now, position the child nodes for each category
+    for (const category of Object.keys(skillsByCategory)) {
+        const categorySkills = skillsByCategory[category];
+        if (categorySkills.length === 0) continue;
+
+        // Use fixed base X for each category
+        const baseX = CATEGORY_BASE_X[category as 'Software' | 'Hardware' | 'soft'] || X_OFFSET;
+        const baseY = CATEGORY_BASE_Y + CATEGORY_NODE_HEIGHT + CATEGORY_MARGIN;
+
+        categorySkills.forEach((skill, idx) => {
+            // Skip the category node itself (already positioned)
+            if (skill.id === 'software' || skill.id === 'hardware' || skill.id === 'soft-skills') return;
+            const row = Math.floor(idx / NODES_PER_ROW);
+            const col = idx % NODES_PER_ROW;
+            const x = baseX + col * NODE_H_SPACING;
+            const y = baseY + row * NODE_V_SPACING;
+            positions[skill.id] = { x, y };
+        });
+    }
     
     return positions;
 };
@@ -368,7 +670,7 @@ const createNodes = (userSkills: UserSkills) => {
     const categoryNodes = userSkills.skillTree?.nodes ? [] : 
         skillTreeData.categories.map((category: any): CategoryNode => ({
             id: category.id,
-            position: positionMap[category.id] || { x: 0, y: 0 },
+            position: positions[category.id] || { x: 0, y: 0 }, // Use dynamic positions instead of positionMap
             data: { label: category.name || category.id },
             targetPosition: Position.Top,
             sourcePosition: Position.Bottom,
@@ -383,7 +685,8 @@ const createNodes = (userSkills: UserSkills) => {
                 justifyContent: 'center',
                 alignItems: 'center',
                 border: category.id === 'software' ? '2px solid #ef4444' : 
-                       category.id === 'hardware' ? '2px solid #a855f7' : '2px solid #10b981',
+                       category.id === 'hardware' ? '2px solid #a855f7' : 
+                       category.id === 'soft-skills' ? '2px solid #10b981' : '2px solid #10b981',
                 borderRadius: '12px',
                 padding: '10px',
             },

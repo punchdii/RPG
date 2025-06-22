@@ -4,15 +4,12 @@ export interface Skill {
   description: string
   prerequisites: string[]
   category: string
-  level: number
+  mastered?: boolean // Whether the user has mastered this skill
   userCount?: number // Number of users who have this skill (for global tree styling)
   children?: string[] // Children skills that depend on this skill
-  learningResources?: Array<{
-    title: string
-    type: string
-    duration?: string
-  }>
-  relatedSkills?: string[]
+  level?: number;
+  learningResources?: LearningResource[];
+  relatedSkills?: string[];
 }
 
 export interface LearningResource {
@@ -32,6 +29,7 @@ export interface UserSkills {
       name: string
       category: 'software' | 'hardware' | 'soft'
       earned: boolean
+      mastered?: boolean
       prerequisites?: string[]
       children?: string[]
       description?: string
