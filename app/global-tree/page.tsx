@@ -145,13 +145,6 @@ export default function GlobalTreePage() {
             )}
           </div>
           
-          {/* User Profile - Show when a user is hovered */}
-          {highlightedUserSkills && (
-            <div className="mb-8 max-w-sm mx-auto">
-              <UserProfile userSkills={userSkills} />
-            </div>
-          )}
-          
           {/* Skill Tree - Full Width */}
           <div className="w-full">
             <SkillTree 

@@ -617,8 +617,15 @@ const createNodes = (userSkills: UserSkills) => {
             // Normalize the category
             const normalizedSkill = {
                 ...skill,
-                category: skill.category === 'soft-skills' ? 'soft' : 
-                         (skill.category === 'software' || skill.category === 'hardware' ? skill.category : 'software')
+                category: (
+                  skill.category === 'soft-skills' || skill.category === 'soft'
+                    ? 'soft'
+                    : skill.category === 'software'
+                      ? 'Software'
+                      : skill.category === 'hardware'
+                        ? 'Hardware'
+                        : skill.category // keep as-is
+                )
             };
             uniqueSkills.push(normalizedSkill);
         } else {
@@ -714,8 +721,15 @@ const createEdges = (userSkills: UserSkills): Edge[] => {
         // Also add connections from prerequisites that might be missing
         const allSkills = getSkillsData(userSkills).map(skill => ({
             ...skill,
-            category: skill.category === 'soft-skills' ? 'soft' : 
-                     (skill.category === 'software' || skill.category === 'hardware' ? skill.category : 'software')
+            category: (
+              skill.category === 'soft-skills' || skill.category === 'soft'
+                ? 'soft'
+                : skill.category === 'software'
+                  ? 'Software'
+                  : skill.category === 'hardware'
+                    ? 'Hardware'
+                    : skill.category // keep as-is
+            )
         }));
         
         const prerequisiteConnections = allSkills.flatMap((skill: any) => {
@@ -740,8 +754,15 @@ const createEdges = (userSkills: UserSkills): Edge[] => {
         // Fallback: build from prerequisites
         const allSkills = getSkillsData(userSkills).map(skill => ({
             ...skill,
-            category: skill.category === 'soft-skills' ? 'soft' : 
-                     (skill.category === 'software' || skill.category === 'hardware' ? skill.category : 'software')
+            category: (
+              skill.category === 'soft-skills' || skill.category === 'soft'
+                ? 'soft'
+                : skill.category === 'software'
+                  ? 'Software'
+                  : skill.category === 'hardware'
+                    ? 'Hardware'
+                    : skill.category // keep as-is
+            )
         }));
         
         connections = allSkills.flatMap((skill: any) => {
