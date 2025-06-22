@@ -36,11 +36,13 @@ interface CustomSkillNodeData {
 export function CustomSkillNode({ data }: { data: CustomSkillNodeData }) {
   const { skill, status, isHighlighted, isHovered, isDimmed, onMouseEnter, onMouseLeave } = data;
 
+  console.log(`[CustomSkillNode] Skill: ${skill.name} (${skill.id}), Mastered: ${skill.mastered}, Status: ${status}, UserCount: ${skill.userCount}`);
+
   // Check if this is a category node
   const isCategoryNode = ['software', 'hardware', 'soft-skills'].includes(skill.id);
 
   const statusClasses = {
-    earned: "border-red-500 bg-red-500/10",
+    earned: "border-green-500 bg-green-500/10",
     available: "border-yellow-500 bg-yellow-500/10", 
     locked: "border-gray-500 bg-gray-500/10",
   }
@@ -56,7 +58,11 @@ export function CustomSkillNode({ data }: { data: CustomSkillNodeData }) {
   let borderColor: string;
   let borderStyle: React.CSSProperties | undefined;
   
-  if (isCategoryNode) {
+  // Check if this skill is mastered (local trees only)
+  if (skill.mastered === true && !skill.userCount) {
+    // Mastered skills in local trees get red outline
+    borderColor = 'border-red-500';
+  } else if (isCategoryNode) {
     // Category nodes use their specific colors
     const categoryColorMap = {
       'software': 'border-red-500',
@@ -72,7 +78,7 @@ export function CustomSkillNode({ data }: { data: CustomSkillNodeData }) {
   } else {
     // Individual skill tree nodes use status colors
     const statusBorderMap = {
-      earned: 'border-red-500',
+      earned: 'border-green-500',
       available: 'border-yellow-500',
       locked: 'border-gray-500'
     };

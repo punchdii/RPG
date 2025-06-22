@@ -33,7 +33,8 @@ const convertSavedSkillTree = (userSkills: UserSkills) => {
     description: node.description || '',
     category: node.category,
     prerequisites: node.prerequisites || [],
-    earned: node.earned
+    earned: node.earned,
+    mastered: node.mastered === true // Only true if explicitly set to true
   }));
 };
 

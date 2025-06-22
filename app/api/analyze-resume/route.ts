@@ -9,6 +9,7 @@ interface SkillNode {
   name: string
   category: 'software' | 'hardware' | 'soft'
   earned: boolean
+  mastered?: boolean
   prerequisites?: string[]
   description?: string
 }
@@ -70,7 +71,8 @@ Rules:
 6. Aim for 15-25 total skill nodes
 7. Use kebab-case for IDs (e.g., "machine-learning", "project-management")
 8. Only return valid JSON, no additional text
-9. Aim to have number of beneficial skills not yet acquired to be 2 times than existing skills`
+9. Aim to have number of beneficial skills not yet acquired to be 2 times than existing skills
+10. DO NOT include a "mastered" field unless the resume shows 5+ years of experience or leadership/expert level work in that specific skill. Most earned skills should NOT have mastered field at all.`
 
 
     const result = await model.generateContent(prompt)
@@ -130,6 +132,25 @@ Rules:
         
         skillTreeData.connections = uniqueConnections
         console.log(`✅ Connection deduplication complete - removed ${duplicateConnectionCount} duplicates, ${uniqueConnections.length} unique connections remain`)
+      }
+      
+      // Safety check: If AI marked too many skills as mastered, override it
+      if (skillTreeData.nodes && Array.isArray(skillTreeData.nodes)) {
+        const earnedSkills = skillTreeData.nodes.filter(node => node.earned)
+        const masteredSkills = skillTreeData.nodes.filter(node => node.mastered === true)
+        
+        // If more than 30% of earned skills are marked as mastered, it's probably wrong
+        if (masteredSkills.length > earnedSkills.length * 0.3) {
+          console.log(`🚨 AI marked ${masteredSkills.length}/${earnedSkills.length} earned skills as mastered - overriding to be more conservative`)
+          
+          // Remove mastered from all but the most likely candidates (first 1-2 skills)
+          skillTreeData.nodes.forEach((node, index) => {
+            if (node.mastered === true && index > 1) {
+              console.log(`🔄 Removing mastered flag from: ${node.id}`)
+              delete node.mastered
+            }
+          })
+        }
       }
       
     } catch (parseError) {
