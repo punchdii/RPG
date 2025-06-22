@@ -18,6 +18,7 @@ export interface IUser {
         name: string
         category: 'software' | 'hardware' | 'soft'
         earned: boolean
+        mastered?: boolean
         prerequisites?: string[]
         children?: string[]
         description?: string

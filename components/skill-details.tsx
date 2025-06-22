@@ -18,10 +18,18 @@ export function SkillDetails({ skill, userSkills, onClose }: SkillDetailsProps) 
   const isLocked = !isEarned && !isAvailable
 
   const getStatusInfo = () => {
+    if (skill.mastered) {
+      return {
+        icon: <Star className="w-5 h-5 text-yellow-400" />,
+        status: "Mastered",
+        color: "text-yellow-400",
+        bgColor: "bg-yellow-500/10 border-yellow-400/30",
+      }
+    }
     if (isEarned) {
       return {
         icon: <Star className="w-5 h-5 text-green-400" />,
-        status: "Mastered",
+        status: "Earned",
         color: "text-green-400",
         bgColor: "bg-green-500/10 border-green-400/30",
       }

@@ -13,6 +13,15 @@ interface SkillNodeProps {
 
 export function SkillNode({ skill, status, onClick }: SkillNodeProps) {
   const getStatusStyles = () => {
+    // Check if skill is mastered first (overrides other styling)
+    if (skill.mastered === true && status === "earned") {
+      return {
+        card: "bg-gradient-to-br from-red-500/20 to-red-600/20 border-red-400/50 hover:border-red-400 cursor-pointer transform hover:scale-105",
+        icon: <Star className="w-4 h-4 text-red-400" />,
+        badge: "bg-red-500/20 text-red-300 border-red-400/30",
+      }
+    }
+    
     switch (status) {
       case "earned":
         return {
@@ -51,7 +60,7 @@ export function SkillNode({ skill, status, onClick }: SkillNodeProps) {
 
       <div className="space-y-2">
         <Badge variant="outline" className={`text-xs ${styles.badge}`}>
-          Level {skill.level}
+          Level {skill.mastered === true ? 'Mastered' : (status === 'earned' ? 'Earned' : 'Not Mastered')}
         </Badge>
 
         {skill.category && (
@@ -61,7 +70,9 @@ export function SkillNode({ skill, status, onClick }: SkillNodeProps) {
         )}
       </div>
 
-      {status === "earned" && <div className="mt-2 text-xs text-green-300">✓ Mastered</div>}
+      {skill.mastered === true && status === "earned" && <div className="mt-2 text-xs text-red-300">✓ Mastered</div>}
+      
+      {status === "earned" && skill.mastered !== true && <div className="mt-2 text-xs text-green-300">✓ Earned</div>}
 
       {status === "available" && <div className="mt-2 text-xs text-blue-300">Ready to learn</div>}
 
