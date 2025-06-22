@@ -3,7 +3,7 @@ import mongoose, { Schema, model, models } from 'mongoose'
 export interface ISkillNode {
   id: string
   name: string
-  category: 'software' | 'hardware' | 'soft'
+  category: 'software' | 'hardware' | 'soft' | 'soft-skills'
   description?: string
   prerequisites?: string[]
   children?: string[]
@@ -27,7 +27,7 @@ export interface IGlobalTree {
 const SkillNodeSchema = new Schema<ISkillNode>({
   id: { type: String, required: true },
   name: { type: String, required: true },
-  category: { type: String, required: true, enum: ['software', 'hardware', 'soft'] },
+  category: { type: String, required: true, enum: ['software', 'hardware', 'soft', 'soft-skills'] },
   description: { type: String, default: '' },
   prerequisites: { type: [String], default: [] },
   children: { type: [String], default: [] },

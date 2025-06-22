@@ -16,7 +16,7 @@ export interface IUser {
       nodes: Array<{
         id: string
         name: string
-        category: 'software' | 'hardware' | 'soft'
+        category: 'software' | 'hardware' | 'soft' | 'soft-skills'
         earned: boolean
         mastered?: boolean
         prerequisites?: string[]
