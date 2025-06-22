@@ -1,11 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { ResumeUpload } from "@/components/resume-upload"
 import type { UserSkills } from "@/types/skills"
 
-export default function UploadPage() {
+function UploadPageContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const uploadType = searchParams.get('type')
@@ -102,5 +102,15 @@ export default function UploadPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function UploadPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen py-8 flex items-center justify-center">
+      <div className="text-white text-lg">Loading...</div>
+    </div>}>
+      <UploadPageContent />
+    </Suspense>
   )
 } 
