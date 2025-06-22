@@ -37,12 +37,14 @@ interface UserWithSkills {
 }
 
 interface UserListSidebarProps {
-  onUserHover: (userSkills: string[] | null) => void
+  onUserHover: (userSkills: string[] | null, userId?: string) => void
+  onUserClick?: (userSkills: string[] | null, userId: string | null) => void
+  selectedUserId?: string | null
   onGlobalTreeRebuilt?: () => Promise<void>
   className?: string
 }
 
-export function UserListSidebar({ onUserHover, onGlobalTreeRebuilt, className = "" }: UserListSidebarProps) {
+export function UserListSidebar({ onUserHover, onUserClick, selectedUserId, onGlobalTreeRebuilt, className = "" }: UserListSidebarProps) {
   const [users, setUsers] = useState<UserWithSkills[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -76,23 +78,38 @@ export function UserListSidebar({ onUserHover, onGlobalTreeRebuilt, className = 
 
   const handleUserMouseEnter = (user: UserWithSkills) => {
     setHoveredUser(user.id)
-    
+    if (selectedUserId) return; // Don't highlight on hover if a user is selected
     // Combine earned skills and earned nodes from skill tree
     const allUserSkills = [
       ...user.earnedSkills,
       ...user.skillTreeNodes.filter(node => node.earned).map(node => node.id)
     ]
-    
     // Remove duplicates
     const uniqueSkills = [...new Set(allUserSkills)]
-    
-    console.log(`🎯 Hovering over user ${user.name}, highlighting skills:`, uniqueSkills)
-    onUserHover(uniqueSkills)
+    onUserHover(uniqueSkills, user.id)
   }
 
   const handleUserMouseLeave = () => {
     setHoveredUser(null)
+    if (selectedUserId) return; // Don't unhighlight on hover out if a user is selected
     onUserHover(null)
+  }
+
+  const handleUserClick = (user: UserWithSkills) => {
+    // Combine earned skills and earned nodes from skill tree
+    const allUserSkills = [
+      ...user.earnedSkills,
+      ...user.skillTreeNodes.filter(node => node.earned).map(node => node.id)
+    ]
+    // Remove duplicates
+    const uniqueSkills = [...new Set(allUserSkills)]
+    if (onUserClick) {
+      if (selectedUserId === user.id) {
+        onUserClick(null, null); // Deselect
+      } else {
+        onUserClick(uniqueSkills, user.id);
+      }
+    }
   }
 
   const getInitials = (name: string) => {
@@ -339,13 +356,10 @@ export function UserListSidebar({ onUserHover, onGlobalTreeRebuilt, className = 
               return (
                 <Card
                   key={user.id}
-                  className={`cursor-pointer transition-all duration-200 border-slate-600 ${
-                    hoveredUser === user.id
-                      ? 'bg-slate-700/80 border-blue-500 shadow-lg shadow-blue-500/20'
-                      : 'bg-slate-800/50 hover:bg-slate-700/60'
-                  }`}
+                  className={`flex items-center space-x-3 p-3 rounded-lg bg-slate-800/50 hover:bg-slate-700/70 cursor-pointer transition ${selectedUserId === user.id ? 'ring-2 ring-blue-400 bg-blue-900/40' : ''}`}
                   onMouseEnter={() => handleUserMouseEnter(user)}
                   onMouseLeave={handleUserMouseLeave}
+                  onClick={() => handleUserClick(user)}
                 >
                   <CardContent className="p-3">
                     <div className="flex items-center space-x-3">

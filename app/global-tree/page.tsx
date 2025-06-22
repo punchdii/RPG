@@ -12,6 +12,7 @@ export default function GlobalTreePage() {
   const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null)
   const [showDetails, setShowDetails] = useState(false)
   const [highlightedUserSkills, setHighlightedUserSkills] = useState<string[] | null>(null)
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
 
     const loadGlobalTree = async () => {
       try {
@@ -67,7 +68,8 @@ export default function GlobalTreePage() {
     setSelectedSkill(null)
   }
 
-  const handleUserHover = (userSkills: string[] | null) => {
+  const handleUserHover = (userSkills: string[] | null, userId?: string) => {
+    if (selectedUserId) return;
     setHighlightedUserSkills(userSkills)
     
     // Update the global tree nodes to mark them as earned based on the highlighted user's skills
@@ -105,6 +107,45 @@ export default function GlobalTreePage() {
     }
   }
 
+  const handleUserClick = (userSkills: string[] | null, userId: string | null) => {
+    if (selectedUserId === userId) {
+      // Deselect
+      setSelectedUserId(null);
+      setHighlightedUserSkills(null);
+      setUserSkills(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          earnedSkills: [],
+          skillTree: {
+            ...prev.skillTree!,
+            nodes: prev.skillTree?.nodes.map(node => ({
+              ...node,
+              earned: false
+            })) || []
+          }
+        };
+      });
+    } else {
+      setSelectedUserId(userId);
+      setHighlightedUserSkills(userSkills);
+      setUserSkills(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          earnedSkills: userSkills || [],
+          skillTree: {
+            ...prev.skillTree!,
+            nodes: prev.skillTree?.nodes.map(node => ({
+              ...node,
+              earned: userSkills?.includes(node.id)
+            })) || []
+          }
+        };
+      });
+    }
+  }
+
   if (!userSkills) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -121,6 +162,8 @@ export default function GlobalTreePage() {
       {/* User List Sidebar */}
       <UserListSidebar 
         onUserHover={handleUserHover}
+        onUserClick={handleUserClick}
+        selectedUserId={selectedUserId}
         onGlobalTreeRebuilt={loadGlobalTree}
         className="flex-shrink-0"
       />
