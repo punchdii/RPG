@@ -1,21 +1,56 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import type { Skill, UserSkills } from "@/types/skills"
-import { X, Star, Zap, Lock, BookOpen, Users, Clock } from "lucide-react"
+import { X, Star, Zap, Lock, BookOpen, Users, Clock, User } from "lucide-react"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
 interface SkillDetailsProps {
   skill: Skill
   userSkills: UserSkills
   onClose: () => void
+  isGlobalTree?: boolean
 }
 
-export function SkillDetails({ skill, userSkills, onClose }: SkillDetailsProps) {
+interface UserWithSkill {
+  id: string
+  name: string
+  email: string
+}
+
+export function SkillDetails({ skill, userSkills, onClose, isGlobalTree = false }: SkillDetailsProps) {
+  const [usersWithSkill, setUsersWithSkill] = useState<UserWithSkill[]>([])
+  const [loadingUsers, setLoadingUsers] = useState(false)
+  
   const isEarned = userSkills.earnedSkills.includes(skill.id)
   const isAvailable = userSkills.availableSkills.includes(skill.id)
   const isLocked = !isEarned && !isAvailable
+
+  useEffect(() => {
+    if (isGlobalTree) {
+      fetchUsersWithSkill()
+    }
+  }, [skill.id, isGlobalTree])
+
+  const fetchUsersWithSkill = async () => {
+    try {
+      setLoadingUsers(true)
+      const response = await fetch(`/api/get-users-by-skill?skillId=${skill.id}`)
+      const data = await response.json()
+      
+      if (data.success) {
+        setUsersWithSkill(data.users)
+      }
+    } catch (error) {
+      console.error('Error fetching users with skill:', error)
+    } finally {
+      setLoadingUsers(false)
+    }
+  }
 
   const getStatusInfo = () => {
     if (isEarned) {
@@ -40,6 +75,15 @@ export function SkillDetails({ skill, userSkills, onClose }: SkillDetailsProps) 
         bgColor: "bg-slate-600/10 border-slate-500/30",
       }
     }
+  }
+
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(word => word[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2)
   }
 
   const statusInfo = getStatusInfo()
@@ -143,7 +187,42 @@ export function SkillDetails({ skill, userSkills, onClose }: SkillDetailsProps) 
             </div>
           )}
 
-          {isAvailable && (
+          {isGlobalTree && (
+            <div>
+              <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                <User className="w-4 h-4" />
+                Users with this Skill
+              </h3>
+              {loadingUsers ? (
+                <div className="text-center py-4">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+                  <p className="text-slate-400 mt-2">Loading users...</p>
+                </div>
+              ) : usersWithSkill.length > 0 ? (
+                <ScrollArea className="h-48">
+                  <div className="space-y-2">
+                    {usersWithSkill.map((user) => (
+                      <div key={user.id} className="flex items-center gap-3 bg-slate-700/30 rounded-lg p-2">
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback className="bg-blue-500/20 text-blue-200">
+                            {getInitials(user.name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="font-medium text-white">{user.name}</div>
+                          <div className="text-xs text-slate-400">{user.email}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              ) : (
+                <p className="text-slate-400 text-center py-4">No users have mastered this skill yet.</p>
+              )}
+            </div>
+          )}
+
+          {isAvailable && !isGlobalTree && (
             <div className="bg-blue-500/10 border border-blue-400/30 rounded-lg p-4">
               <h4 className="font-semibold text-blue-300 mb-2">Ready to Learn!</h4>
               <p className="text-sm text-slate-300 mb-3">

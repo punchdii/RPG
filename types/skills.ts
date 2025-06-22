@@ -4,8 +4,15 @@ export interface Skill {
   description: string
   prerequisites: string[]
   category: string
+  level: number
   userCount?: number // Number of users who have this skill (for global tree styling)
   children?: string[] // Children skills that depend on this skill
+  learningResources?: Array<{
+    title: string
+    type: string
+    duration?: string
+  }>
+  relatedSkills?: string[]
 }
 
 export interface LearningResource {

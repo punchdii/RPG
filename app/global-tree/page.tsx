@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { SkillTree } from "@/components/skill-tree"
 import { SkillDetails } from "@/components/skill-details"
 import { UserListSidebar } from "@/components/user-list-sidebar"
+import { UserProfile } from "@/components/user-profile"
 import type { Skill, UserSkills } from "@/types/skills"
 
 export default function GlobalTreePage() {
@@ -68,6 +69,40 @@ export default function GlobalTreePage() {
 
   const handleUserHover = (userSkills: string[] | null) => {
     setHighlightedUserSkills(userSkills)
+    
+    // Update the global tree nodes to mark them as earned based on the highlighted user's skills
+    if (userSkills) {
+      setUserSkills(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          earnedSkills: userSkills,
+          skillTree: {
+            ...prev.skillTree!,
+            nodes: prev.skillTree?.nodes.map(node => ({
+              ...node,
+              earned: userSkills.includes(node.id)
+            })) || []
+          }
+        };
+      });
+    } else {
+      // Reset all nodes to not earned when no user is highlighted
+      setUserSkills(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          earnedSkills: [],
+          skillTree: {
+            ...prev.skillTree!,
+            nodes: prev.skillTree?.nodes.map(node => ({
+              ...node,
+              earned: false
+            })) || []
+          }
+        };
+      });
+    }
   }
 
   if (!userSkills) {
@@ -110,6 +145,13 @@ export default function GlobalTreePage() {
             )}
           </div>
           
+          {/* User Profile - Show when a user is hovered */}
+          {highlightedUserSkills && (
+            <div className="mb-8 max-w-sm mx-auto">
+              <UserProfile userSkills={userSkills} />
+            </div>
+          )}
+          
           {/* Skill Tree - Full Width */}
           <div className="w-full">
             <SkillTree 
@@ -124,7 +166,8 @@ export default function GlobalTreePage() {
             <SkillDetails 
               skill={selectedSkill} 
               userSkills={userSkills} 
-              onClose={handleCloseDetails} 
+              onClose={handleCloseDetails}
+              isGlobalTree={true}
             />
           )}
         </div>

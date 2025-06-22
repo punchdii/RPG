@@ -18,9 +18,9 @@ export default function SkillTreePage() {
   useEffect(() => {
     const loadUserSkills = async () => {
       // First, try to get skills from sessionStorage (recent upload)
-      const storedSkills = sessionStorage.getItem('userSkills')
-      if (storedSkills) {
-        setUserSkills(JSON.parse(storedSkills))
+    const storedSkills = sessionStorage.getItem('userSkills')
+    if (storedSkills) {
+      setUserSkills(JSON.parse(storedSkills))
         return
       }
 
