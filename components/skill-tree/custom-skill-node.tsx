@@ -111,7 +111,7 @@ export function CustomSkillNode({ data }: { data: CustomSkillNodeData }) {
     >
       <Handle type="target" position={Position.Top} className="!bg-transparent" />
       <div className="flex items-center gap-1">
-        <h3 className={`${textSize} text-white`}>{skill.name}</h3>
+      <h3 className={`${textSize} text-white`}>{skill.name}</h3>
         {skill.userCount && skill.userCount > 1 && (
           <span 
             className="text-xs bg-orange-500/30 text-orange-100 px-1.5 py-0.5 rounded-full font-semibold"

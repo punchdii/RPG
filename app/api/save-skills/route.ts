@@ -237,7 +237,7 @@ export async function POST(req: NextRequest) {
         shouldUpdateGlobalTree = true
       }
     }
-    
+
     // Try direct MongoDB update to bypass any schema issues
     const skillTreeString = skills.skillTree ? JSON.stringify(skills.skillTree) : null
     
